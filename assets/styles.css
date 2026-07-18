@@ -1,0 +1,172 @@
+/* ==========================================================
+   AI-Powered Cybersecurity Dashboard
+   Custom Stylesheet
+   Version: 3.0
+========================================================== */
+
+/* ----------------------------------------------------------
+   Main Container
+---------------------------------------------------------- */
+
+.main .block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    max-width: 1200px;
+}
+
+/* ----------------------------------------------------------
+   Headings
+---------------------------------------------------------- */
+
+h1 {
+    color: #1565C0;
+    font-weight: 700;
+}
+
+h2 {
+    color: #1976D2;
+    font-weight: 600;
+}
+
+h3 {
+    color: #1E88E5;
+}
+
+/* ----------------------------------------------------------
+   Sidebar
+---------------------------------------------------------- */
+
+section[data-testid="stSidebar"] {
+    background-color: #F5F7FA;
+    border-right: 1px solid #E0E0E0;
+}
+
+/* ----------------------------------------------------------
+   Buttons
+---------------------------------------------------------- */
+
+.stButton > button {
+    width: 100%;
+    border-radius: 10px;
+    font-weight: 600;
+    padding: 0.6rem;
+    transition: 0.3s ease;
+}
+
+.stButton > button:hover {
+    transform: scale(1.02);
+}
+
+/* ----------------------------------------------------------
+   Download Button
+---------------------------------------------------------- */
+
+.stDownloadButton > button {
+    width: 100%;
+    border-radius: 10px;
+}
+
+/* ----------------------------------------------------------
+   Metrics
+---------------------------------------------------------- */
+
+div[data-testid="stMetric"] {
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 12px;
+    background: #FFFFFF;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+/* ----------------------------------------------------------
+   DataFrames
+---------------------------------------------------------- */
+
+div[data-testid="stDataFrame"] {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* ----------------------------------------------------------
+   File Uploader
+---------------------------------------------------------- */
+
+div[data-testid="stFileUploader"] {
+    border: 2px dashed #90CAF9;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+/* ----------------------------------------------------------
+   Alerts
+---------------------------------------------------------- */
+
+div[data-testid="stAlert"] {
+    border-radius: 10px;
+}
+
+/* ----------------------------------------------------------
+   Progress Bar
+---------------------------------------------------------- */
+
+div[data-testid="stProgressBar"] {
+    border-radius: 8px;
+}
+
+/* ----------------------------------------------------------
+   Horizontal Rule
+---------------------------------------------------------- */
+
+hr {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* ----------------------------------------------------------
+   Footer
+---------------------------------------------------------- */
+
+.footer {
+    text-align: center;
+    color: #777777;
+    font-size: 14px;
+    padding: 20px;
+}
+
+/* ----------------------------------------------------------
+   Cards
+---------------------------------------------------------- */
+
+.dashboard-card {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 16px;
+    border: 1px solid #ECECEC;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* ----------------------------------------------------------
+   Tables
+---------------------------------------------------------- */
+
+table {
+    border-collapse: collapse;
+}
+
+th {
+    font-weight: bold;
+}
+
+/* ----------------------------------------------------------
+   Responsive
+---------------------------------------------------------- */
+
+@media (max-width: 768px) {
+
+    .main .block-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+}
