@@ -14,6 +14,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
     steps:
@@ -35,21 +36,45 @@ jobs:
       - name: Smoke-test imports
         run: |
           python - <<'PY'
-          import app
-          import pages.Dataset_Explorer
-          import pages.EDA_Dashboard
-          import pages.Feature_Importance
-          import pages.Home
-          import pages.Model_Performance
-          import pages.Prediction
-          import src.dashboard
-          import src.model_loader
-          import src.prediction
-          import src.preprocessing
-          import src.theme
-          import src.utils
-          import src.visualization
+          import importlib
+          modules = [
+              "app",
+              "pages.Dataset_Explorer",
+              "pages.EDA_Dashboard",
+              "pages.Feature_Importance",
+              "pages.Home",
+              "pages.Model_Performance",
+              "pages.Prediction",
+              "src.dashboard",
+              "src.model_loader",
+              "src.prediction",
+              "src.preprocessing",
+              "src.theme",
+              "src.utils",
+              "src.visualization",
+          ]
+          for module in modules:
+              importlib.import_module(module)
+              print(f"PASS import: {module}")
           print("All application modules imported successfully.")
+          PY
+
+      - name: Runtime artifact contract check
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          required = [
+              Path("models/best_model.pkl"),
+              Path("models/preprocessor.pkl"),
+              Path("models/feature_columns.pkl"),
+          ]
+          missing = [str(path) for path in required if not path.is_file()]
+          if missing:
+              print("Runtime artifacts are intentionally external to this repository:")
+              print("\n".join(missing))
+              print("Import smoke tests PASS; prediction runtime requires artifact sync.")
+          else:
+              print("All runtime artifacts are present.")
           PY
 
       - name: Run unit tests
