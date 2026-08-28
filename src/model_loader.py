@@ -1,79 +1,49 @@
-"""
-==========================================================
-AI-Powered Cybersecurity Dashboard
-Model Loader Module
-Version: 3.0
-==========================================================
-"""
+"""Model loading utilities with clear artifact diagnostics."""
 
 from pathlib import Path
+from typing import Optional
+
 import joblib
 
 from config.config import MODEL_PATH
 
 
-class ModelLoader:
-    """
-    Utility class for loading trained machine learning models.
-    """
+class ModelArtifactError(FileNotFoundError):
+    """Raised when the trained model artifact is unavailable."""
 
+
+class ModelLoader:
     def __init__(self, model_path=MODEL_PATH):
         self.model_path = Path(model_path)
         self.model = None
 
     def model_exists(self) -> bool:
-        """
-        Check whether the trained model exists.
-        """
-        return self.model_path.exists()
+        return self.model_path.is_file()
+
+    def artifact_message(self) -> str:
+        return (
+            f"Trained model not found at: {self.model_path}. "
+            "Run the Part 2 training pipeline and copy the exact model artifact "
+            "to this repository, or configure MODEL_PATH."
+        )
 
     def load_model(self):
-        """
-        Load the trained model from disk.
-        """
         if not self.model_exists():
-            raise FileNotFoundError(
-                f"Model not found: {self.model_path}"
-            )
+            raise ModelArtifactError(self.artifact_message())
 
-        self.model = joblib.load(self.model_path)
-
+        try:
+            self.model = joblib.load(self.model_path)
+        except Exception as error:
+            raise RuntimeError(
+                f"Unable to load model artifact '{self.model_path}': {error}"
+            ) from error
         return self.model
 
     def get_model(self):
-        """
-        Return the loaded model.
-        """
         if self.model is None:
             self.load_model()
-
         return self.model
 
 
 def load_trained_model():
-    """
-    Convenience function for loading the trained model.
-    """
-    loader = ModelLoader()
-    return loader.get_model()
-
-
-if __name__ == "__main__":
-
-    try:
-
-        model = load_trained_model()
-
-        print("=" * 60)
-        print("MODEL LOADED SUCCESSFULLY")
-        print("=" * 60)
-
-        print(type(model))
-
-    except Exception as error:
-
-        print("=" * 60)
-        print("MODEL LOADING FAILED")
-        print("=" * 60)
-
-        print(error)
+    return ModelLoader().get_model()
