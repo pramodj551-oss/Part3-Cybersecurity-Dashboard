@@ -1,49 +1,54 @@
-"""Model loading utilities with clear artifact diagnostics."""
+"""Load and validate the complete Part 2 runtime artifact contract."""
 
 from pathlib import Path
-from typing import Optional
 
 import joblib
 
-from config.config import MODEL_PATH
+from config.config import FEATURE_COLUMNS_PATH, MODEL_PATH, PREPROCESSOR_PATH
 
 
 class ModelArtifactError(FileNotFoundError):
-    """Raised when the trained model artifact is unavailable."""
+    """Raised when a required Part 2 runtime artifact is unavailable."""
 
 
 class ModelLoader:
-    def __init__(self, model_path=MODEL_PATH):
+    def __init__(
+        self,
+        model_path=MODEL_PATH,
+        preprocessor_path=PREPROCESSOR_PATH,
+        feature_columns_path=FEATURE_COLUMNS_PATH,
+    ):
         self.model_path = Path(model_path)
+        self.preprocessor_path = Path(preprocessor_path)
+        self.feature_columns_path = Path(feature_columns_path)
         self.model = None
+        self.preprocessor = None
+        self.feature_columns = None
 
-    def model_exists(self) -> bool:
-        return self.model_path.is_file()
+    def _require(self, path: Path, label: str):
+        if not path.is_file():
+            raise ModelArtifactError(
+                f"{label} not found at {path}. "
+                "Run the Part 2 artifact sync workflow before using predictions."
+            )
 
-    def artifact_message(self) -> str:
-        return (
-            f"Trained model not found at: {self.model_path}. "
-            "Run the Part 2 training pipeline and copy the exact model artifact "
-            "to this repository, or configure MODEL_PATH."
-        )
-
-    def load_model(self):
-        if not self.model_exists():
-            raise ModelArtifactError(self.artifact_message())
-
+    def load(self):
+        self._require(self.model_path, "Trained regression model")
+        self._require(self.preprocessor_path, "Preprocessor")
+        self._require(self.feature_columns_path, "Feature column contract")
         try:
             self.model = joblib.load(self.model_path)
+            self.preprocessor = joblib.load(self.preprocessor_path)
+            self.feature_columns = list(joblib.load(self.feature_columns_path))
         except Exception as error:
-            raise RuntimeError(
-                f"Unable to load model artifact '{self.model_path}': {error}"
-            ) from error
-        return self.model
+            raise RuntimeError(f"Unable to load Part 2 artifacts: {error}") from error
+        return self
 
-    def get_model(self):
+    def get_artifacts(self):
         if self.model is None:
-            self.load_model()
-        return self.model
+            self.load()
+        return self.model, self.preprocessor, self.feature_columns
 
 
-def load_trained_model():
-    return ModelLoader().get_model()
+def load_runtime_artifacts():
+    return ModelLoader().get_artifacts()
