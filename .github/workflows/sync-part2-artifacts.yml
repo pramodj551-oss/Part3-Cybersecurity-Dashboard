@@ -1,0 +1,83 @@
+name: Sync Part 2 Runtime Artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      part2_run_id:
+        description: "Successful Part 2 GitHub Actions run ID"
+        required: true
+        default: "33503501527"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download Part 2 runtime artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: part2-runtime-artifacts
+          repository: pramodj551-oss/Part2-Cybersecurity-ML-Pipeline
+          run-id: ${{ inputs.part2_run_id }}
+          github-token: ${{ secrets.PART2_ARTIFACT_TOKEN }}
+          path: .part2-runtime
+
+      - name: Validate and install artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            ".part2-runtime/models/best_model.pkl"
+            ".part2-runtime/models/preprocessor.pkl"
+            ".part2-runtime/models/feature_columns.pkl"
+            ".part2-runtime/outputs/evaluation_report.json"
+            ".part2-runtime/outputs/metrics.json"
+            ".part2-runtime/outputs/feature_importance.csv"
+          )
+          for path in "${required[@]}"; do
+            test -s "$path" || { echo "Missing or empty artifact: $path"; exit 1; }
+          done
+          rm -rf models outputs
+          mkdir -p models outputs
+          cp .part2-runtime/models/{best_model.pkl,preprocessor.pkl,feature_columns.pkl} models/
+          cp .part2-runtime/outputs/{evaluation_report.json,metrics.json,feature_importance.csv} outputs/
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = {
+              "source_repository": "pramodj551-oss/Part2-Cybersecurity-ML-Pipeline",
+              "source_run_id": int("${{ inputs.part2_run_id }}"),
+              "artifact_name": "part2-runtime-artifacts",
+              "files": [
+                  "models/best_model.pkl",
+                  "models/preprocessor.pkl",
+                  "models/feature_columns.pkl",
+                  "outputs/evaluation_report.json",
+                  "outputs/metrics.json",
+                  "outputs/feature_importance.csv",
+              ],
+          }
+          Path("models/artifact_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+          PY
+
+      - name: Real prediction smoke test
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+          python scripts/smoke_test_prediction.py
+
+      - name: Commit synchronized artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add models outputs
+          git diff --cached --quiet && echo "No artifact changes" && exit 0
+          git commit -m "chore: sync Part 2 runtime artifacts"
+          git push
