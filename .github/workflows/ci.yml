@@ -9,10 +9,13 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   PART2_RUN_ID: "33503501527"
+  PART2_REPOSITORY: "pramodj551-oss/Part2-Cybersecurity-ML-Pipeline"
+  PART2_ARTIFACT_NAME: "part2-runtime-artifacts"
 
 jobs:
   test:
@@ -43,21 +46,11 @@ jobs:
           python - <<'PY'
           import importlib
           modules = [
-              "app",
-              "pages.Dataset_Explorer",
-              "pages.EDA_Dashboard",
-              "pages.Feature_Importance",
-              "pages.Home",
-              "pages.Model_Performance",
-              "pages.Prediction",
-              "src.dashboard",
-              "src.explainability",
-              "src.model_loader",
-              "src.prediction",
-              "src.preprocessing",
-              "src.theme",
-              "src.utils",
-              "src.visualization",
+              "app", "pages.Dataset_Explorer", "pages.EDA_Dashboard",
+              "pages.Feature_Importance", "pages.Home", "pages.Model_Performance",
+              "pages.Prediction", "src.dashboard", "src.explainability",
+              "src.model_loader", "src.prediction", "src.preprocessing",
+              "src.theme", "src.utils", "src.visualization",
           ]
           for module in modules:
               importlib.import_module(module)
@@ -74,9 +67,9 @@ jobs:
               raise SystemExit(f"Required source dataset is missing: {DATASET_PATH}")
           df = pd.read_csv(DATASET_PATH, nrows=5)
           required = {
-              "incident_id", "incident_date", "sector", "region",
-              "attack_type", "threat_actor", "records_affected",
-              "detection_time_hours", "ransom_demand_usd", "severity_score",
+              "incident_id", "incident_date", "sector", "region", "attack_type",
+              "threat_actor", "records_affected", "detection_time_hours",
+              "ransom_demand_usd", "severity_score",
           }
           missing = sorted(required.difference(df.columns))
           if missing:
@@ -84,34 +77,54 @@ jobs:
           print(f"PASS source data contract: {DATASET_PATH}")
           PY
 
+      - name: Locate Part 2 runtime artifact
+        env:
+          GH_TOKEN: ${{ secrets.PART2_ARTIFACT_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "${GH_TOKEN:-}" || { echo "PART2_ARTIFACT_TOKEN is not configured."; exit 1; }
+          api="https://api.github.com/repos/${PART2_REPOSITORY}/actions/runs/${PART2_RUN_ID}/artifacts"
+          response="$(curl --fail-with-body --silent --show-error --location \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" "${api}")"
+          artifact_id="$(python -c 'import json,sys; d=json.load(sys.stdin); m=[a for a in d.get("artifacts",[]) if a.get("name")=="part2-runtime-artifacts" and not a.get("expired")]; print(m[0]["id"] if m else "")' <<<"${response}")"
+          test -n "${artifact_id}" || { echo "Required Part 2 artifact not found in run ${PART2_RUN_ID}: ${PART2_ARTIFACT_NAME}"; exit 1; }
+          echo "PASS Part 2 artifact located: ${PART2_ARTIFACT_NAME} (id=${artifact_id})"
+          echo "PART2_ARTIFACT_ID=${artifact_id}" >> "$GITHUB_ENV"
+
       - name: Download Part 2 runtime artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: part2-runtime-artifacts
-          repository: pramodj551-oss/Part2-Cybersecurity-ML-Pipeline
-          run-id: ${{ env.PART2_RUN_ID }}
-          github-token: ${{ secrets.PART2_ARTIFACT_TOKEN }}
-          path: .part2-runtime
+        env:
+          GH_TOKEN: ${{ secrets.PART2_ARTIFACT_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p .part2-runtime/extracted
+          url="https://api.github.com/repos/${PART2_REPOSITORY}/actions/artifacts/${PART2_ARTIFACT_ID}/zip"
+          curl --fail-with-body --silent --show-error --location \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" "${url}" -o .part2-runtime/artifacts.zip
+          unzip -q .part2-runtime/artifacts.zip -d .part2-runtime/extracted
+          rm -f .part2-runtime/artifacts.zip
+          echo "PASS downloaded Part 2 runtime artifact."
 
       - name: Install synchronized runtime artifacts
         shell: bash
         run: |
           set -euo pipefail
+          root=".part2-runtime/extracted"
           required=(
-            ".part2-runtime/models/best_model.pkl"
-            ".part2-runtime/models/preprocessor.pkl"
-            ".part2-runtime/models/feature_columns.pkl"
-            ".part2-runtime/outputs/evaluation_report.json"
-            ".part2-runtime/outputs/metrics.json"
-            ".part2-runtime/outputs/feature_importance.csv"
+            "${root}/models/best_model.pkl" "${root}/models/preprocessor.pkl"
+            "${root}/models/feature_columns.pkl" "${root}/outputs/evaluation_report.json"
+            "${root}/outputs/metrics.json" "${root}/outputs/feature_importance.csv"
           )
           for path in "${required[@]}"; do
             test -s "$path" || { echo "Missing or empty synchronized artifact: $path"; exit 1; }
           done
           rm -rf models outputs
           mkdir -p models outputs
-          cp .part2-runtime/models/{best_model.pkl,preprocessor.pkl,feature_columns.pkl} models/
-          cp .part2-runtime/outputs/{evaluation_report.json,metrics.json,feature_importance.csv} outputs/
+          cp "${root}/models/"{best_model.pkl,preprocessor.pkl,feature_columns.pkl} models/
+          cp "${root}/outputs/"{evaluation_report.json,metrics.json,feature_importance.csv} outputs/
           echo "PASS synchronized six-file Part 2 runtime artifact contract."
 
       - name: Verify runtime artifact contract
@@ -119,12 +132,9 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           required = [
-              Path("models/best_model.pkl"),
-              Path("models/preprocessor.pkl"),
-              Path("models/feature_columns.pkl"),
-              Path("outputs/evaluation_report.json"),
-              Path("outputs/metrics.json"),
-              Path("outputs/feature_importance.csv"),
+              Path("models/best_model.pkl"), Path("models/preprocessor.pkl"),
+              Path("models/feature_columns.pkl"), Path("outputs/evaluation_report.json"),
+              Path("outputs/metrics.json"), Path("outputs/feature_importance.csv"),
           ]
           missing = [str(path) for path in required if not path.is_file() or path.stat().st_size == 0]
           if missing:
