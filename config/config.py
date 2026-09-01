@@ -12,11 +12,9 @@ ASSETS_DIR = PROJECT_ROOT / "assets"
 IMAGES_DIR = ASSETS_DIR / "images"
 STYLES_DIR = ASSETS_DIR / "styles"
 
-# Keep this path aligned with Part 2's authoritative raw-data contract.
 DATASET_NAME = "cybersecurity_incident_reports.csv"
 DATASET_PATH = RAW_DATA_DIR / DATASET_NAME
 
-# Part 2 runtime artifact contract.
 MODEL_NAME = "best_model.pkl"
 MODEL_PATH = MODELS_DIR / MODEL_NAME
 PREPROCESSOR_PATH = MODELS_DIR / "preprocessor.pkl"
@@ -29,13 +27,31 @@ EVALUATION_REPORT = OUTPUTS_DIR / "evaluation_report.json"
 METRICS_OUTPUT = OUTPUTS_DIR / "metrics.json"
 MODEL_COMPARISON_OUTPUT = OUTPUTS_DIR / "model_comparison.csv"
 
+TARGET_COLUMN = "severity_score"
+PREDICTION_FEATURES = [
+    "records_affected",
+    "detection_time_hours",
+    "ransom_demand_usd",
+    "sector",
+    "region",
+    "attack_type",
+    "threat_actor",
+    "data_exfiltration",
+    "zero_day_used",
+]
+EXCLUDED_POST_INCIDENT_FEATURES = [
+    "downtime_hours",
+    "response_team_size",
+    "regulatory_fine_usd",
+    "resolved_within_7_days",
+]
+
 LOG_FILE = LOGS_DIR / "dashboard.log"
 LOG_LEVEL = "INFO"
 APP_TITLE = "AI-Powered Cybersecurity Dashboard"
 APP_ICON = "🛡️"
 LAYOUT = "wide"
 SIDEBAR_STATE = "expanded"
-TARGET_COLUMN = "severity_score"
 RANDOM_STATE = 42
 TEST_SIZE = 0.20
 FIGURE_WIDTH = 10
@@ -45,8 +61,6 @@ MAX_UPLOAD_SIZE_MB = 100
 SUPPORTED_FILE_TYPES = ["csv"]
 DEFAULT_SAMPLE_SIZE = 100
 
-# These directories are created only when configuration is imported. Runtime
-# artifacts themselves are never fabricated by this module.
 for directory in [
     DATA_DIR,
     RAW_DATA_DIR,
