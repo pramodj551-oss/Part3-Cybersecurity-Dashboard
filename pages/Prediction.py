@@ -9,7 +9,9 @@ Version: 3.0
 import pandas as pd
 import streamlit as st
 
+from config.config import MAX_UPLOAD_SIZE_MB
 from src.prediction import predict_incident
+from src.upload_validation import validate_upload_size
 
 
 def render():
@@ -33,6 +35,19 @@ learning model.
     if uploaded_file is None:
 
         st.info("Please upload a CSV dataset.")
+
+        return
+
+    try:
+
+        validate_upload_size(
+            uploaded_file,
+            MAX_UPLOAD_SIZE_MB
+        )
+
+    except ValueError as error:
+
+        st.error(str(error))
 
         return
 
