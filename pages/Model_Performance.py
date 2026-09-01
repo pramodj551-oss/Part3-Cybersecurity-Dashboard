@@ -16,26 +16,34 @@ def _load_json(path: Path):
 
 
 def _load_metrics():
-    """Load Part 2 metrics from either the evaluation report or metrics JSON."""
+    """Load usable Part 2 metrics from the first artifact that contains them."""
     candidates = [Path(EVALUATION_REPORT), Path(METRICS_OUTPUT)]
+    errors = []
     for candidate in candidates:
         if not candidate.is_file() or candidate.stat().st_size == 0:
             continue
-        payload = _load_json(candidate)
-        if isinstance(payload, dict):
-            nested = payload.get("metrics")
-            if isinstance(nested, dict):
-                return nested
-            return payload
-        if isinstance(payload, list):
-            rows = {
-                str(item["Metric"]): item["Value"]
-                for item in payload
-                if isinstance(item, dict) and "Metric" in item and "Value" in item
-            }
-            if rows:
-                return rows
-    raise FileNotFoundError("No usable regression metrics JSON artifact is available.")
+        try:
+            payload = _load_json(candidate)
+            if isinstance(payload, dict):
+                nested = payload.get("metrics")
+                metrics = nested if isinstance(nested, dict) else payload
+                if _normalize(metrics):
+                    return metrics
+            elif isinstance(payload, list):
+                rows = {
+                    str(item["Metric"]): item["Value"]
+                    for item in payload
+                    if isinstance(item, dict)
+                    and "Metric" in item
+                    and "Value" in item
+                }
+                if _normalize(rows):
+                    return rows
+            errors.append(f"{candidate}: no usable regression metrics")
+        except (OSError, json.JSONDecodeError, TypeError, ValueError) as error:
+            errors.append(f"{candidate}: {error}")
+    detail = "; ".join(errors) if errors else "no metrics artifacts found"
+    raise FileNotFoundError(f"No usable regression metrics JSON artifact is available: {detail}")
 
 
 def _normalize(metrics):

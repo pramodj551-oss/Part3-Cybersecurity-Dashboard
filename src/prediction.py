@@ -32,24 +32,44 @@ class PredictionEngine:
 
     def transform(self, data: pd.DataFrame):
         raw = self.validate_input(data)
-        # These fields are allowed in an uploaded historical dataset but are
-        # explicitly excluded from the prediction contract to prevent leakage.
         inference_input = raw.drop(
             columns=EXCLUDED_POST_INCIDENT_FEATURES + ["severity_score"],
             errors="ignore",
         )
         transformed = self.preprocessor.transform(inference_input)
-        if not isinstance(transformed, pd.DataFrame):
-            transformed = pd.DataFrame(transformed)
-        if len(self.feature_columns) == transformed.shape[1]:
-            transformed.columns = self.feature_columns
-        missing = [c for c in self.feature_columns if c not in transformed.columns]
+
+        # The fitted preprocessor owns the authoritative transformed schema.
+        # The model is trained on the selected subset persisted in
+        # feature_columns.pkl, so first name the full transformed matrix from
+        # the preprocessor and only then select/reorder the model contract.
+        try:
+            transformed_names = list(self.preprocessor.get_feature_names_out())
+        except AttributeError as error:
+            raise RuntimeError(
+                "Part 2 preprocessor does not expose get_feature_names_out(); "
+                "cannot deterministically align transformed features."
+            ) from error
+
+        if len(transformed_names) != transformed.shape[1]:
+            raise RuntimeError(
+                "Preprocessor feature-name count does not match transformed "
+                f"matrix width: names={len(transformed_names)}, "
+                f"columns={transformed.shape[1]}."
+            )
+        if len(set(transformed_names)) != len(transformed_names):
+            raise RuntimeError("Preprocessor returned duplicate transformed feature names.")
+
+        if hasattr(transformed, "toarray"):
+            transformed = transformed.toarray()
+        aligned = pd.DataFrame(transformed, columns=transformed_names, index=raw.index)
+
+        missing = [c for c in self.feature_columns if c not in aligned.columns]
         if missing:
             raise ValueError(
                 "Transformed data is missing required features: "
                 + ", ".join(map(str, missing))
             )
-        return transformed.loc[:, self.feature_columns]
+        return aligned.loc[:, self.feature_columns]
 
     def predict(self, data: pd.DataFrame):
         return self.model.predict(self.transform(data))

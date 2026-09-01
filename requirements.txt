@@ -3,13 +3,13 @@
 # Requirements
 # ==========================================================
 
-# Data Processing
-pandas>=2.2.0
-numpy>=1.26.0
+# Data Processing — aligned with Part 2 runtime artifacts
+pandas==2.2.2
+numpy==1.26.4
 
-# Machine Learning
-scikit-learn>=1.5.0
-joblib>=1.4.0
+# Machine Learning — MUST match the Part 2 serialization environment
+scikit-learn==1.5.1
+joblib==1.4.2
 
 # Dashboard
 streamlit>=1.46.0
