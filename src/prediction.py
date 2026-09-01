@@ -38,10 +38,6 @@ class PredictionEngine:
         )
         transformed = self.preprocessor.transform(inference_input)
 
-        # The fitted preprocessor owns the authoritative transformed schema.
-        # The model is trained on the selected subset persisted in
-        # feature_columns.pkl, so first name the full transformed matrix from
-        # the preprocessor and only then select/reorder the model contract.
         try:
             transformed_names = list(self.preprocessor.get_feature_names_out())
         except AttributeError as error:
@@ -72,7 +68,12 @@ class PredictionEngine:
         return aligned.loc[:, self.feature_columns]
 
     def predict(self, data: pd.DataFrame):
-        return self.model.predict(self.transform(data))
+        # Part 2's LinearRegression artifact was fitted without pandas feature
+        # names. Pass the deterministically aligned matrix as a NumPy array to
+        # keep inference representation consistent with training and suppress
+        # the sklearn feature-name warning without changing feature order.
+        aligned = self.transform(data)
+        return self.model.predict(aligned.to_numpy())
 
     def predict_with_summary(self, data: pd.DataFrame) -> pd.DataFrame:
         raw = self.validate_input(data)
