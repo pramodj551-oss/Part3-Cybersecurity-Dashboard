@@ -13,7 +13,7 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   PART2_REPOSITORY: "pramodj551-oss/Part2-Cybersecurity-ML-Pipeline"
-  PART2_RELEASE_TAG: "part2-runtime-33503501527"
+  PART2_RELEASE_TAG: "part2-runtime-33510832014"
   PART2_BUNDLE_NAME: "part2-runtime-bundle.zip"
 
 jobs:
