@@ -24,7 +24,8 @@ REQUIRED_DATA_COLUMNS = {
 
 
 def test_source_dataset_matches_contract():
-    assert DATASET_PATH == Path("data/raw/cybersecurity_incident_reports.csv")
+    expected = (Path(__file__).resolve().parents[1] / "data/raw/cybersecurity_incident_reports.csv")
+    assert DATASET_PATH == expected
     assert DATASET_PATH.is_file()
     columns = set(pd.read_csv(DATASET_PATH, nrows=1).columns)
     assert REQUIRED_DATA_COLUMNS.issubset(columns)
