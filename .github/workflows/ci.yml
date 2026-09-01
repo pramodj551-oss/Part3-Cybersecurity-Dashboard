@@ -35,7 +35,7 @@ jobs:
           pip install pytest
 
       - name: Compile Python sources
-        run: python -m compileall -q app.py config pages src tests
+        run: python -m compileall -q app.py config pages src tests scripts
 
       - name: Smoke-test imports
         run: |
@@ -94,16 +94,33 @@ jobs:
               Path("models/best_model.pkl"),
               Path("models/preprocessor.pkl"),
               Path("models/feature_columns.pkl"),
+              Path("outputs/evaluation_report.json"),
+              Path("outputs/metrics.json"),
+              Path("outputs/feature_importance.csv"),
           ]
-          missing = [str(path) for path in required if not path.is_file()]
+          missing = [str(path) for path in required if not path.is_file() or path.stat().st_size == 0]
           if missing:
-              print("SKIP runtime artifact availability: artifacts are external to this repository.")
-              print("Missing artifacts:")
-              print("\n".join(missing))
-              print("The runtime loader is tested separately and must fail closed when artifacts are unavailable.")
-          else:
-              print("PASS runtime artifact availability: all required artifacts are present.")
+              raise SystemExit(
+                  "Production artifact contract failed. Run the Part 2 artifact sync workflow first.\n"
+                  + "Missing/empty artifacts:\n"
+                  + "\n".join(missing)
+              )
+          print("PASS runtime artifact contract: all six required Part 2 artifacts are present and non-empty.")
           PY
+
+      - name: Validate loaded runtime artifacts
+        run: |
+          python - <<'PY'
+          from src.model_loader import load_runtime_artifacts
+          model, preprocessor, feature_columns = load_runtime_artifacts()
+          assert callable(getattr(model, "predict", None))
+          assert callable(getattr(preprocessor, "transform", None))
+          assert feature_columns
+          print(f"PASS loaded runtime artifacts: {len(feature_columns)} feature columns.")
+          PY
+
+      - name: Real prediction smoke test
+        run: python scripts/smoke_test_prediction.py
 
       - name: Run unit tests
         run: pytest -q
