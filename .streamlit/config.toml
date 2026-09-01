@@ -1,11 +1,6 @@
-# ==========================================================
-# AI-Powered Cybersecurity Dashboard
-# Streamlit Configuration
-# Version: 3.0
-# ==========================================================
+# Streamlit configuration for the cybersecurity dashboard.
 
 [theme]
-
 primaryColor = "#1565C0"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F5F7FA"
@@ -13,21 +8,16 @@ textColor = "#212121"
 font = "sans serif"
 
 [server]
-
 headless = true
-runOnSave = true
+runOnSave = false
 fileWatcherType = "auto"
 
 [browser]
-
 gatherUsageStats = false
-serverAddress = "localhost"
 
 [client]
-
-showErrorDetails = true
+showErrorDetails = false
 toolbarMode = "minimal"
 
 [runner]
-
 fastReruns = true
