@@ -1,6 +1,7 @@
 """Load and validate the complete Part 2 runtime artifact contract."""
 
 from pathlib import Path
+import pickle
 
 import joblib
 
@@ -35,6 +36,30 @@ class ModelLoader:
         if path.stat().st_size == 0:
             raise ModelArtifactError(f"{label} is empty: {path}")
 
+    @staticmethod
+    def _load_feature_columns(path: Path):
+        """Load feature_columns.pkl from Part 2's pickle/joblib formats.
+
+        Part 2 may serialize this simple Python sequence with either
+        ``pickle.dump`` or ``joblib.dump``.  Prefer the standard pickle
+        protocol first, then fall back to joblib for compatibility.
+        """
+        pickle_error = None
+        try:
+            with path.open("rb") as handle:
+                return list(pickle.load(handle))
+        except Exception as error:
+            pickle_error = error
+
+        try:
+            return list(joblib.load(path))
+        except Exception as joblib_error:
+            raise RuntimeError(
+                "Unable to deserialize feature column contract "
+                f"{path} using pickle or joblib. "
+                f"pickle_error={pickle_error}; joblib_error={joblib_error}"
+            ) from joblib_error
+
     def load(self):
         self._require(self.model_path, "Trained regression model")
         self._require(self.preprocessor_path, "Preprocessor")
@@ -42,7 +67,7 @@ class ModelLoader:
         try:
             model = joblib.load(self.model_path)
             preprocessor = joblib.load(self.preprocessor_path)
-            feature_columns = list(joblib.load(self.feature_columns_path))
+            feature_columns = self._load_feature_columns(self.feature_columns_path)
         except Exception as error:
             raise RuntimeError(f"Unable to load Part 2 artifacts: {error}") from error
 
