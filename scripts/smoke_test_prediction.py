@@ -1,6 +1,11 @@
 """End-to-end smoke test using the synchronized Part 2 runtime artifacts."""
 
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 import pandas as pd
 
@@ -8,7 +13,6 @@ from config.config import DATASET_PATH, PREDICTION_FEATURES, TARGET_COLUMN
 from src.prediction import PredictionEngine
 
 
-ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_ARTIFACTS = [
     ROOT / "models/best_model.pkl",
     ROOT / "models/preprocessor.pkl",
