@@ -12,6 +12,7 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  PART2_RUN_ID: "33503501527"
 
 jobs:
   test:
@@ -69,10 +70,8 @@ jobs:
           python - <<'PY'
           from config.config import DATASET_PATH
           import pandas as pd
-
           if not DATASET_PATH.is_file():
               raise SystemExit(f"Required source dataset is missing: {DATASET_PATH}")
-
           df = pd.read_csv(DATASET_PATH, nrows=5)
           required = {
               "incident_id", "incident_date", "sector", "region",
@@ -85,11 +84,40 @@ jobs:
           print(f"PASS source data contract: {DATASET_PATH}")
           PY
 
+      - name: Download Part 2 runtime artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: part2-runtime-artifacts
+          repository: pramodj551-oss/Part2-Cybersecurity-ML-Pipeline
+          run-id: ${{ env.PART2_RUN_ID }}
+          github-token: ${{ secrets.PART2_ARTIFACT_TOKEN }}
+          path: .part2-runtime
+
+      - name: Install synchronized runtime artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            ".part2-runtime/models/best_model.pkl"
+            ".part2-runtime/models/preprocessor.pkl"
+            ".part2-runtime/models/feature_columns.pkl"
+            ".part2-runtime/outputs/evaluation_report.json"
+            ".part2-runtime/outputs/metrics.json"
+            ".part2-runtime/outputs/feature_importance.csv"
+          )
+          for path in "${required[@]}"; do
+            test -s "$path" || { echo "Missing or empty synchronized artifact: $path"; exit 1; }
+          done
+          rm -rf models outputs
+          mkdir -p models outputs
+          cp .part2-runtime/models/{best_model.pkl,preprocessor.pkl,feature_columns.pkl} models/
+          cp .part2-runtime/outputs/{evaluation_report.json,metrics.json,feature_importance.csv} outputs/
+          echo "PASS synchronized six-file Part 2 runtime artifact contract."
+
       - name: Verify runtime artifact contract
         run: |
           python - <<'PY'
           from pathlib import Path
-
           required = [
               Path("models/best_model.pkl"),
               Path("models/preprocessor.pkl"),
@@ -100,11 +128,7 @@ jobs:
           ]
           missing = [str(path) for path in required if not path.is_file() or path.stat().st_size == 0]
           if missing:
-              raise SystemExit(
-                  "Production artifact contract failed. Run the Part 2 artifact sync workflow first.\n"
-                  + "Missing/empty artifacts:\n"
-                  + "\n".join(missing)
-              )
+              raise SystemExit("Production artifact contract failed:\n" + "\n".join(missing))
           print("PASS runtime artifact contract: all six required Part 2 artifacts are present and non-empty.")
           PY
 
