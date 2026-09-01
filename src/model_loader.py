@@ -25,23 +25,37 @@ class ModelLoader:
         self.preprocessor = None
         self.feature_columns = None
 
-    def _require(self, path: Path, label: str):
+    @staticmethod
+    def _require(path: Path, label: str):
         if not path.is_file():
             raise ModelArtifactError(
                 f"{label} not found at {path}. "
                 "Run the Part 2 artifact sync workflow before using predictions."
             )
+        if path.stat().st_size == 0:
+            raise ModelArtifactError(f"{label} is empty: {path}")
 
     def load(self):
         self._require(self.model_path, "Trained regression model")
         self._require(self.preprocessor_path, "Preprocessor")
         self._require(self.feature_columns_path, "Feature column contract")
         try:
-            self.model = joblib.load(self.model_path)
-            self.preprocessor = joblib.load(self.preprocessor_path)
-            self.feature_columns = list(joblib.load(self.feature_columns_path))
+            model = joblib.load(self.model_path)
+            preprocessor = joblib.load(self.preprocessor_path)
+            feature_columns = list(joblib.load(self.feature_columns_path))
         except Exception as error:
             raise RuntimeError(f"Unable to load Part 2 artifacts: {error}") from error
+
+        if not hasattr(model, "predict"):
+            raise RuntimeError("Loaded model does not expose a predict() method.")
+        if not hasattr(preprocessor, "transform"):
+            raise RuntimeError("Loaded preprocessor does not expose transform().")
+        if not feature_columns or len(set(map(str, feature_columns))) != len(feature_columns):
+            raise RuntimeError("Feature column contract must be non-empty and unique.")
+
+        self.model = model
+        self.preprocessor = preprocessor
+        self.feature_columns = feature_columns
         return self
 
     def get_artifacts(self):
