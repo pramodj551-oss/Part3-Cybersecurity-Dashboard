@@ -13,7 +13,7 @@ permissions:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   PART2_REPOSITORY: "pramodj551-oss/Part2-Cybersecurity-ML-Pipeline"
-  PART2_RELEASE_TAG: "part2-runtime-33512672229"
+  PART2_RELEASE_TAG: "part2-runtime-33513838252"
   PART2_BUNDLE_NAME: "part2-runtime-bundle.zip"
 
 jobs:
@@ -25,57 +25,37 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
     steps:
       - uses: actions/checkout@v6
-
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
-
       - name: Compile Python sources
         run: python -m compileall -q app.py config pages src tests scripts
-
       - name: Smoke-test imports
         run: |
           python - <<'PY'
           import importlib
-          modules = [
-              "app", "pages.Dataset_Explorer", "pages.EDA_Dashboard",
-              "pages.Feature_Importance", "pages.Home", "pages.Model_Performance",
-              "pages.Prediction", "src.dashboard", "src.explainability",
-              "src.model_loader", "src.prediction", "src.preprocessing",
-              "src.theme", "src.utils", "src.visualization",
-          ]
+          modules = ["app", "pages.Dataset_Explorer", "pages.EDA_Dashboard", "pages.Feature_Importance", "pages.Home", "pages.Model_Performance", "pages.Prediction", "src.dashboard", "src.explainability", "src.model_loader", "src.prediction", "src.preprocessing", "src.theme", "src.utils", "src.visualization"]
           for module in modules:
               importlib.import_module(module)
               print(f"PASS import: {module}")
-          print("All application modules imported successfully.")
           PY
-
       - name: Verify source data contract
         run: |
           python - <<'PY'
           from config.config import DATASET_PATH
           import pandas as pd
-          if not DATASET_PATH.is_file():
-              raise SystemExit(f"Required source dataset is missing: {DATASET_PATH}")
-          df = pd.read_csv(DATASET_PATH, nrows=5)
-          required = {
-              "incident_id", "incident_date", "sector", "region", "attack_type",
-              "threat_actor", "records_affected", "detection_time_hours",
-              "ransom_demand_usd", "severity_score",
-          }
-          missing = sorted(required.difference(df.columns))
-          if missing:
-              raise SystemExit(f"Dataset contract mismatch; missing columns: {missing}")
+          if not DATASET_PATH.is_file(): raise SystemExit(f"Required source dataset is missing: {DATASET_PATH}")
+          required = {"incident_id", "incident_date", "sector", "region", "attack_type", "threat_actor", "records_affected", "detection_time_hours", "ransom_demand_usd", "severity_score"}
+          missing = sorted(required.difference(pd.read_csv(DATASET_PATH, nrows=5).columns))
+          if missing: raise SystemExit(f"Dataset contract mismatch; missing columns: {missing}")
           print(f"PASS source data contract: {DATASET_PATH}")
           PY
-
       - name: Download pinned Part 2 runtime release
         run: |
           set -euo pipefail
@@ -86,55 +66,36 @@ jobs:
           rm -f .part2-runtime/artifacts.zip
           test -s .part2-runtime/extracted/artifact_manifest.json
           echo "PASS downloaded pinned Part 2 runtime release: ${PART2_RELEASE_TAG}"
-
       - name: Verify artifact integrity and install six-file contract
         run: |
           set -euo pipefail
           python - <<'PY'
-          import hashlib
-          import json
-          import shutil
+          import hashlib, json, shutil
           from pathlib import Path
           root = Path(".part2-runtime/extracted")
           manifest = json.loads((root / "artifact_manifest.json").read_text(encoding="utf-8"))
-          expected = {
-              "models/best_model.pkl", "models/preprocessor.pkl", "models/feature_columns.pkl",
-              "outputs/evaluation_report.json", "outputs/metrics.json", "outputs/feature_importance.csv",
-          }
-          files = manifest.get("files", {})
-          if set(files) != expected:
-              raise SystemExit(f"Artifact manifest contract mismatch: {sorted(files)}")
-          for relative, expected_hash in files.items():
+          expected = {"models/best_model.pkl", "models/preprocessor.pkl", "models/feature_columns.pkl", "outputs/evaluation_report.json", "outputs/metrics.json", "outputs/feature_importance.csv"}
+          if set(manifest.get("files", {})) != expected: raise SystemExit(f"Artifact manifest contract mismatch: {sorted(manifest.get('files', {}))}")
+          for relative, expected_hash in manifest["files"].items():
               path = root / relative
-              if not path.is_file() or path.stat().st_size == 0:
-                  raise SystemExit(f"Missing or empty artifact: {relative}")
+              if not path.is_file() or path.stat().st_size == 0: raise SystemExit(f"Missing or empty artifact: {relative}")
               actual = hashlib.sha256(path.read_bytes()).hexdigest()
-              if actual != expected_hash:
-                  raise SystemExit(f"SHA256 mismatch for {relative}: {actual} != {expected_hash}")
-          shutil.rmtree("models", ignore_errors=True)
-          shutil.rmtree("outputs", ignore_errors=True)
-          Path("models").mkdir()
-          Path("outputs").mkdir()
-          for relative in sorted(expected):
-              destination = Path(relative)
-              shutil.copy2(root / relative, destination)
+              if actual != expected_hash: raise SystemExit(f"SHA256 mismatch for {relative}: {actual} != {expected_hash}")
+          shutil.rmtree("models", ignore_errors=True); shutil.rmtree("outputs", ignore_errors=True)
+          for relative in expected:
+              destination = Path(relative); destination.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(root / relative, destination)
               print(f"PASS artifact: {relative}")
           print("PASS 6/6 Part 2 artifacts + SHA256 integrity contract")
           PY
-
       - name: Validate loaded runtime artifacts
         run: |
           python - <<'PY'
           from src.model_loader import load_runtime_artifacts
           model, preprocessor, feature_columns = load_runtime_artifacts()
-          assert callable(getattr(model, "predict", None))
-          assert callable(getattr(preprocessor, "transform", None))
-          assert feature_columns
+          assert callable(getattr(model, "predict", None)); assert callable(getattr(preprocessor, "transform", None)); assert feature_columns
           print(f"PASS loaded runtime artifacts: {len(feature_columns)} feature columns.")
           PY
-
       - name: Real prediction smoke test
         run: python scripts/smoke_test_prediction.py
-
       - name: Run unit tests
         run: pytest -q
