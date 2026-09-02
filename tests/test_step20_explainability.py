@@ -26,11 +26,7 @@ def test_step20_explainability_contract(tmp_path: Path):
 
     # sklearn 1.5.1 emits a known upstream SciPy deprecation from its L-BFGS-B path.
     with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            category=DeprecationWarning,
-            module=r"sklearn\.linear_model\._logistic",
-        )
+        warnings.simplefilter("ignore", DeprecationWarning)
         linear = LogisticRegression(random_state=42, max_iter=500).fit(x, y)
     linear_result = extract_feature_importance(linear, names)
     assert len(linear_result) == len(names)
