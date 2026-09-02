@@ -9,6 +9,7 @@ Version: 3.0
 import streamlit as st
 
 from src.theme import theme
+from src.arrow_compat import make_display_safe
 
 
 class DashboardUI:
@@ -97,8 +98,8 @@ class DashboardUI:
     @staticmethod
     def dataframe(df):
         st.dataframe(
-            df,
-            use_container_width=True
+            make_display_safe(df),
+            width="stretch"
         )
 
     @staticmethod
