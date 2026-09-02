@@ -11,7 +11,7 @@ OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 LOGS_DIR = PROJECT_ROOT / "logs"
 ASSETS_DIR = PROJECT_ROOT / "assets"
 IMAGES_DIR = ASSETS_DIR / "images"
-STYLES_DIR = ASSETS_DIR / "styles'
+STYLES_DIR = ASSETS_DIR / "styles"
 
 DATASET_NAME = "cybersecurity_incident_reports.csv"
 DATASET_PATH = RAW_DATA_DIR / DATASET_NAME
