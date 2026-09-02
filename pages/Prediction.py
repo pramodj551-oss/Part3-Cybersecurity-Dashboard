@@ -12,6 +12,7 @@ import streamlit as st
 from config.config import MAX_UPLOAD_SIZE_MB
 from src.prediction import predict_incident
 from src.upload_validation import validate_upload_size
+from src.arrow_compat import make_display_safe
 
 
 def render():
@@ -69,8 +70,8 @@ learning model.
     st.subheader("Input Preview")
 
     st.dataframe(
-        input_df.head(),
-        use_container_width=True
+        make_display_safe(input_df.head()),
+        width="stretch"
     )
 
     st.write(f"Records Available: **{len(input_df)}**")
@@ -97,8 +98,8 @@ learning model.
                 st.subheader("Prediction Results")
 
                 st.dataframe(
-                    prediction_df,
-                    use_container_width=True
+                    make_display_safe(prediction_df),
+                    width="stretch"
                 )
 
                 st.download_button(
