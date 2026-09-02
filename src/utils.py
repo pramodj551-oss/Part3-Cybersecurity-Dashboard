@@ -126,7 +126,9 @@ def dataframe_to_safe_csv(dataframe: pd.DataFrame) -> str:
 
     safe_dataframe = dataframe.copy()
     for column in safe_dataframe.columns:
-        safe_dataframe[column] = safe_dataframe[column].map(_sanitize_csv_cell)
+        series = safe_dataframe[column]
+        if pd.api.types.is_object_dtype(series.dtype) or pd.api.types.is_string_dtype(series.dtype):
+            safe_dataframe[column] = series.map(_sanitize_csv_cell)
 
     return safe_dataframe.to_csv(index=False)
 
