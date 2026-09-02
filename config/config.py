@@ -76,14 +76,23 @@ MAX_CSV_FIELD_LENGTH = 1_000_000
 SUPPORTED_FILE_TYPES = ["csv"]
 DEFAULT_SAMPLE_SIZE = 100
 
-for directory in [
-    DATA_DIR,
-    RAW_DATA_DIR,
-    MODELS_DIR,
-    OUTPUTS_DIR,
-    LOGS_DIR,
-    ASSETS_DIR,
-    IMAGES_DIR,
-    STYLES_DIR,
-]:
-    directory.mkdir(parents=True, exist_ok=True)
+
+def ensure_directories() -> None:
+    """Create configured runtime directories when explicitly requested.
+
+    Importing this configuration module is intentionally side-effect free.
+    Callers that perform filesystem writes can invoke this initializer at
+    their explicit setup boundary.
+    """
+
+    for directory in (
+        DATA_DIR,
+        RAW_DATA_DIR,
+        MODELS_DIR,
+        OUTPUTS_DIR,
+        LOGS_DIR,
+        ASSETS_DIR,
+        IMAGES_DIR,
+        STYLES_DIR,
+    ):
+        directory.mkdir(parents=True, exist_ok=True)
