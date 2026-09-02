@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
@@ -18,7 +19,6 @@ def _load_json(path: Path):
 def _load_metrics():
     """Load usable Part 2 metrics from the first artifact that contains them."""
     candidates = [Path(EVALUATION_REPORT), Path(METRICS_OUTPUT)]
-    errors = []
     for candidate in candidates:
         if not candidate.is_file() or candidate.stat().st_size == 0:
             continue
@@ -39,11 +39,9 @@ def _load_metrics():
                 }
                 if _normalize(rows):
                     return rows
-            errors.append(f"{candidate}: no usable regression metrics")
-        except (OSError, json.JSONDecodeError, TypeError, ValueError) as error:
-            errors.append(f"{candidate}: {error}")
-    detail = "; ".join(errors) if errors else "no metrics artifacts found"
-    raise FileNotFoundError(f"No usable regression metrics JSON artifact is available: {detail}")
+        except (OSError, json.JSONDecodeError, TypeError, ValueError):
+            continue
+    raise FileNotFoundError("No usable regression metrics JSON artifact is available.")
 
 
 def _normalize(metrics):
@@ -60,7 +58,7 @@ def _normalize(metrics):
                     value = float(metrics[key])
                 except (TypeError, ValueError):
                     continue
-                if pd.notna(value):
+                if np.isfinite(value):
                     result[label] = value
                     break
     return result
@@ -70,8 +68,8 @@ def render():
     st.title("📉 Model Performance")
     try:
         metrics = _normalize(_load_metrics())
-    except Exception as error:
-        st.warning(f"Regression metrics are not available yet: {error}")
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        st.warning("Regression metrics are not available yet.")
         return
 
     columns = st.columns(3)
