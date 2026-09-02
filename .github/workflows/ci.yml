@@ -87,6 +87,8 @@ jobs:
               print(f"PASS artifact: {relative}")
           print("PASS 6/6 Part 2 artifacts + SHA256 integrity contract")
           PY
+      - name: Verify current Part 3 repository artifact identity
+        run: python scripts/verify_repository_artifact_hashes.py
       - name: Validate loaded runtime artifacts
         run: |
           python - <<'PY'
