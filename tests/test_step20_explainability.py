@@ -24,6 +24,7 @@ def test_step20_explainability_contract(tmp_path: Path):
     assert tree_result["importance"].ge(0).all()
     assert tree_result["importance"].is_monotonic_decreasing
 
+    # sklearn 1.5.1 emits a known upstream SciPy deprecation from its L-BFGS-B path.
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore",
