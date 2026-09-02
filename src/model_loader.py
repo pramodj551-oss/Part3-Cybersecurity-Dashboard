@@ -6,6 +6,7 @@ import pickle
 import joblib
 
 from config.config import FEATURE_COLUMNS_PATH, MODEL_PATH, PREPROCESSOR_PATH
+from src.runtime_artifact_identity import verify_runtime_artifact_identity
 
 
 class ModelArtifactError(FileNotFoundError):
@@ -90,4 +91,11 @@ class ModelLoader:
 
 
 def load_runtime_artifacts():
+    """Verify repository runtime identity before deserializing production artifacts."""
+    ok, _, message = verify_runtime_artifact_identity()
+    if not ok:
+        raise ModelArtifactError(
+            "Runtime artifact identity verification failed; refusing to load artifacts. "
+            f"{message}"
+        )
     return ModelLoader().get_artifacts()
