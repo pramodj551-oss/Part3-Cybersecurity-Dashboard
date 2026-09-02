@@ -19,3 +19,18 @@ def test_upload_over_limit_is_rejected():
 def test_missing_upload_size_is_rejected():
     with pytest.raises(ValueError, match="size is unavailable"):
         validate_upload_size(SimpleNamespace(), 100)
+
+
+def test_zero_byte_upload_is_rejected():
+    with pytest.raises(ValueError, match="empty"):
+        validate_upload_size(SimpleNamespace(size=0), 100)
+
+
+def test_negative_upload_size_is_rejected():
+    with pytest.raises(ValueError, match="invalid"):
+        validate_upload_size(SimpleNamespace(size=-1), 100)
+
+
+def test_non_integer_upload_size_is_rejected():
+    with pytest.raises(ValueError, match="invalid"):
+        validate_upload_size(SimpleNamespace(size="100"), 100)
