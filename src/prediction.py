@@ -5,7 +5,11 @@ from typing import Union
 import numpy as np
 import pandas as pd
 
-from config.config import EXCLUDED_POST_INCIDENT_FEATURES, PREDICTION_FEATURES
+from config.config import (
+    EXCLUDED_POST_INCIDENT_FEATURES,
+    PREDICTION_FEATURES,
+    PREDICTION_NUMERIC_LIMITS,
+)
 from src.model_loader import load_runtime_artifacts
 
 
@@ -31,14 +35,7 @@ class PredictionEngine:
             )
 
         validated = data.copy()
-        numeric_features = [
-            "records_affected",
-            "detection_time_hours",
-            "ransom_demand_usd",
-            "data_exfiltration",
-            "zero_day_used",
-        ]
-        for column in numeric_features:
+        for column, (minimum, maximum) in PREDICTION_NUMERIC_LIMITS.items():
             try:
                 values = pd.to_numeric(validated[column], errors="raise")
             except (TypeError, ValueError) as error:
@@ -49,6 +46,11 @@ class PredictionEngine:
             if not np.isfinite(values).all():
                 raise ValueError(
                     f"Prediction feature '{column}' contains NaN or infinite values."
+                )
+            if (values < minimum).any() or (values > maximum).any():
+                raise ValueError(
+                    f"Prediction feature '{column}' is outside the allowed range "
+                    f"[{minimum:g}, {maximum:g}]."
                 )
             validated[column] = values
 
