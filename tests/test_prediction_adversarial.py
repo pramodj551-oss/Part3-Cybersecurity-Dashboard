@@ -18,7 +18,7 @@ from config.config import (
     PREDICTION_FEATURES,
     PREDICTION_NUMERIC_LIMITS,
 )
-from src.model_loader import ModelLoader
+from src.model_loader import ModelArtifactError, ModelLoader
 from src.prediction import PredictionEngine
 from src.upload_validation import validate_upload_size
 
@@ -227,7 +227,7 @@ def test_malformed_date_is_not_treated_as_a_prediction_feature():
 
 
 def test_model_loader_rejects_non_pickle_model_without_execution():
-    """Invalid artifact bytes must fail closed without an executable payload."""
+    """Untrusted custom artifact paths must be rejected before deserialization."""
     tmp = ROOT / ".pytest_adversarial_tmp"
     tmp.mkdir(exist_ok=True)
     try:
@@ -244,7 +244,10 @@ def test_model_loader_rejects_non_pickle_model_without_execution():
             preprocessor_path=preprocessor_path,
             feature_columns_path=feature_columns_path,
         )
-        with pytest.raises(RuntimeError, match="Unable to load Part 2 artifacts"):
+        with pytest.raises(
+            ModelArtifactError,
+            match="outside the configured production paths",
+        ):
             loader.load()
     finally:
         for path in tmp.glob("*"):

@@ -42,7 +42,7 @@ class ModelLoader:
         """Load feature_columns.pkl from Part 2's pickle/joblib formats.
 
         Part 2 may serialize this simple Python sequence with either
-        ``pickle.dump`` or ``joblib.dump``.  Prefer the standard pickle
+        ``pickle.dump`` or ``joblib.dump``. Prefer the standard pickle
         protocol first, then fall back to joblib for compatibility.
         """
         pickle_error = None
@@ -65,6 +65,24 @@ class ModelLoader:
         self._require(self.model_path, "Trained regression model")
         self._require(self.preprocessor_path, "Preprocessor")
         self._require(self.feature_columns_path, "Feature column contract")
+
+        production_paths = (
+            self.model_path == Path(MODEL_PATH)
+            and self.preprocessor_path == Path(PREPROCESSOR_PATH)
+            and self.feature_columns_path == Path(FEATURE_COLUMNS_PATH)
+        )
+        if not production_paths:
+            raise ModelArtifactError(
+                "ModelLoader refuses to deserialize artifacts outside the configured production paths."
+            )
+
+        ok, _, message = verify_runtime_artifact_identity()
+        if not ok:
+            raise ModelArtifactError(
+                "Runtime artifact identity verification failed; refusing to deserialize artifacts. "
+                f"{message}"
+            )
+
         try:
             model = joblib.load(self.model_path)
             preprocessor = joblib.load(self.preprocessor_path)
@@ -91,11 +109,10 @@ class ModelLoader:
 
 
 def load_runtime_artifacts():
-    """Verify repository runtime identity before deserializing production artifacts."""
-    ok, _, message = verify_runtime_artifact_identity()
-    if not ok:
-        raise ModelArtifactError(
-            "Runtime artifact identity verification failed; refusing to load artifacts. "
-            f"{message}"
-        )
-    return ModelLoader().get_artifacts()
+    """Load production artifacts through the identity-gated ModelLoader."""
+    loader = ModelLoader(
+        model_path=MODEL_PATH,
+        preprocessor_path=PREPROCESSOR_PATH,
+        feature_columns_path=FEATURE_COLUMNS_PATH,
+    ).load()
+    return loader.model, loader.preprocessor, loader.feature_columns
