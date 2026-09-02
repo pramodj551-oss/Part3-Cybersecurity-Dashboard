@@ -6,6 +6,7 @@ Version: 3.0
 ==========================================================
 """
 
+import pandas as pd
 import streamlit as st
 
 from src.csv_security import CSVSecurityError, read_bounded_csv
@@ -59,7 +60,7 @@ quality, and statistical information.
     st.divider()
 
     st.subheader("Column Information")
-    info = __import__("pandas").DataFrame({
+    info = pd.DataFrame({
         "Column": df.columns,
         "Data Type": df.dtypes.astype(str),
         "Missing Values": df.isnull().sum().values,
