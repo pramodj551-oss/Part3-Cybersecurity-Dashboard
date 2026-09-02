@@ -39,8 +39,8 @@ def render():
     display = df.sort_values(["Importance", "Feature"], ascending=[False, True], kind="mergesort").head(top_n)
     fig = px.bar(display, x="Importance", y="Feature", orientation="h", title="Top Feature Importance")
     fig.update_layout(yaxis={"categoryorder": "total ascending"})
-    st.plotly_chart(fig, use_container_width=True)
-    st.dataframe(display, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
+    st.dataframe(display, width="stretch")
 
 
 if __name__ == "__main__":
