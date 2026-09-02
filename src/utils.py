@@ -12,6 +12,9 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+from config.config import MAX_UPLOAD_SIZE_MB
+from src.csv_security import read_bounded_csv
+
 
 # ==========================================================
 # File Utilities
@@ -42,15 +45,24 @@ def create_directory(directory):
 
 def load_dataset(file_path):
     """
-    Load dataset from CSV.
+    Load a local CSV through the same bounded parser used for untrusted uploads.
     """
 
-    if not file_exists(file_path):
+    path = Path(file_path)
+    if not path.is_file():
         raise FileNotFoundError(
-            f"Dataset not found: {file_path}"
+            f"Dataset not found: {path}"
+        )
+    if path.stat().st_size == 0:
+        raise ValueError("Dataset is empty.")
+    max_bytes = MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if path.stat().st_size > max_bytes:
+        raise ValueError(
+            f"Dataset exceeds the maximum allowed size of {MAX_UPLOAD_SIZE_MB} MB."
         )
 
-    return pd.read_csv(file_path)
+    with path.open("rb") as handle:
+        return read_bounded_csv(handle)
 
 
 def dataset_summary(df: pd.DataFrame) -> dict:
@@ -130,7 +142,7 @@ Streamlit
 
 **Machine Learning**
 
-Random Forest Classifier
+Severity-score regression
 """
     )
 
