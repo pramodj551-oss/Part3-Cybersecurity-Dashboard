@@ -13,7 +13,7 @@ from config.config import MAX_UPLOAD_SIZE_MB
 from src.csv_security import CSVSecurityError, read_bounded_csv
 from src.upload_validation import validate_upload_size
 from src.visualization import visualizer
-from src.utils import dataset_summary
+from src.utils import dataset_summary, dataframe_to_safe_csv
 from src.arrow_compat import make_display_safe
 
 
@@ -72,7 +72,7 @@ quality, and statistical information.
     st.divider()
     st.download_button(
         label="Download Dataset",
-        data=df.to_csv(index=False),
+        data=dataframe_to_safe_csv(df),
         file_name="dataset.csv",
         mime="text/csv"
     )
