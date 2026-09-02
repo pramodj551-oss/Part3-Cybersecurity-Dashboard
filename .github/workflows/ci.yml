@@ -6,6 +6,7 @@ on:
       - main
       - feature/step30a-reproducibility-output-contract
       - feature/step31b-csv-resource-abuse
+      - feature/step31-end-to-end-security-audit
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -18,6 +19,7 @@ env:
   PART2_REPOSITORY: "pramodj551-oss/Part2-Cybersecurity-ML-Pipeline"
   PART2_RELEASE_TAG: "part2-runtime-33513838252"
   PART2_BUNDLE_NAME: "part2-runtime-bundle.zip"
+  PART2_BUNDLE_SHA256: "ece2b6bf91f19e5c0eb19475ae7198155f3fdaa4e8839ec9ab95f8cfcf031d54"
 
 jobs:
   test:
@@ -67,6 +69,12 @@ jobs:
           mkdir -p .part2-runtime/extracted
           url="https://github.com/${PART2_REPOSITORY}/releases/download/${PART2_RELEASE_TAG}/${PART2_BUNDLE_NAME}"
           curl --fail-with-body --silent --show-error --location "$url" -o .part2-runtime/artifacts.zip
+          actual_sha256="$(sha256sum .part2-runtime/artifacts.zip | cut -d' ' -f1)"
+          if [[ "$actual_sha256" != "$PART2_BUNDLE_SHA256" ]]; then
+            echo "FAIL Part 2 bundle SHA256: $actual_sha256 != $PART2_BUNDLE_SHA256"
+            exit 1
+          fi
+          echo "PASS Part 2 bundle SHA256: $actual_sha256"
           unzip -q .part2-runtime/artifacts.zip -d .part2-runtime/extracted
           rm -f .part2-runtime/artifacts.zip
           test -s .part2-runtime/extracted/artifact_manifest.json
