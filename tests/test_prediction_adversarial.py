@@ -48,8 +48,8 @@ def test_non_numeric_required_feature_fails_closed():
     data["records_affected"] = data["records_affected"].astype(object)
     data.loc[0, "records_affected"] = "definitely-not-a-number"
 
-    with pytest.raises((ValueError, TypeError, RuntimeError)):
-        PredictionEngine().predict(data)
+    with pytest.raises(ValueError, match="must contain numeric values"):
+        PredictionEngine.validate_input(data)
 
 
 def test_malformed_numeric_values_fail_closed():
@@ -58,8 +58,8 @@ def test_malformed_numeric_values_fail_closed():
         data = _valid_prediction_frame()
         data["records_affected"] = data["records_affected"].astype(object)
         data.loc[0, "records_affected"] = value
-        with pytest.raises((ValueError, TypeError, RuntimeError)):
-            PredictionEngine().predict(data)
+        with pytest.raises(ValueError, match="contains NaN or infinite values"):
+            PredictionEngine.validate_input(data)
 
 
 def test_empty_prediction_frame_is_rejected():
