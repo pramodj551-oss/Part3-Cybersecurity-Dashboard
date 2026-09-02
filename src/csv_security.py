@@ -59,18 +59,28 @@ def _safe_reader(stream: BinaryIO):
         rows = []
         total_cells = 0
         for row_number, row in enumerate(reader, start=1):
-            if row_number == 1 and (not row or all(field == "" for field in row)):
-                raise CSVSecurityError("CSV header is empty.")
-            if len(row) > MAX_CSV_COLUMNS:
-                raise CSVSecurityError(
-                    f"CSV exceeds the maximum of {MAX_CSV_COLUMNS} columns."
-                )
-            if row_number > MAX_CSV_ROWS + 1:
-                raise CSVSecurityError(
-                    f"CSV exceeds the maximum of {MAX_CSV_ROWS:,} data rows."
-                )
-            if any(len(field) > MAX_CSV_FIELD_LENGTH for field in row):
-                raise CSVSecurityError("CSV field exceeds the configured maximum length.")
+            if row_number == 1:
+                if not row or all(field == "" for field in row):
+                    raise CSVSecurityError("CSV header is empty.")
+                if len(row) == 0:
+                    raise CSVSecurityError("CSV must contain at least one column.")
+                if len(row) > MAX_CSV_COLUMNS:
+                    raise CSVSecurityError(
+                        f"CSV exceeds the maximum of {MAX_CSV_COLUMNS} columns."
+                    )
+                if any(not name or len(name) > MAX_CSV_FIELD_LENGTH for name in row):
+                    raise CSVSecurityError("CSV contains an invalid column name.")
+            else:
+                if len(row) > MAX_CSV_COLUMNS:
+                    raise CSVSecurityError(
+                        f"CSV exceeds the maximum of {MAX_CSV_COLUMNS} columns."
+                    )
+                if row_number > MAX_CSV_ROWS + 1:
+                    raise CSVSecurityError(
+                        f"CSV exceeds the maximum of {MAX_CSV_ROWS:,} data rows."
+                    )
+                if any(len(field) > MAX_CSV_FIELD_LENGTH for field in row):
+                    raise CSVSecurityError("CSV field exceeds the configured maximum length.")
             total_cells += len(row)
             if total_cells > MAX_CSV_CELLS:
                 raise CSVSecurityError("CSV exceeds the configured cell limit.")
@@ -95,12 +105,8 @@ def _safe_reader(stream: BinaryIO):
         raise CSVSecurityError("Uploaded CSV is empty.")
 
     header = rows[0]
-    if len(header) == 0:
-        raise CSVSecurityError("CSV must contain at least one column.")
     if len(set(header)) != len(header):
         raise CSVSecurityError("CSV contains duplicate column names.")
-    if any(not name or len(name) > MAX_CSV_FIELD_LENGTH for name in header):
-        raise CSVSecurityError("CSV contains an invalid column name.")
 
     expected_columns = len(header)
     for row in rows[1:]:
