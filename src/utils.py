@@ -12,7 +12,7 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
-from config.config import MAX_UPLOAD_SIZE_MB
+from config.config import DATA_DIR, MAX_UPLOAD_SIZE_MB
 from src.csv_security import read_bounded_csv
 
 
@@ -45,14 +45,21 @@ def create_directory(directory):
 
 def load_dataset(file_path):
     """
-    Load a local CSV through the same bounded parser used for untrusted uploads.
+    Load a local CSV through the bounded parser used for untrusted uploads.
+
+    Dataset loading is restricted to DATA_DIR after canonical path resolution.
+    Resolving before the boundary check also prevents symlinks from escaping
+    the approved dataset root.
     """
 
-    path = Path(file_path)
+    dataset_root = Path(DATA_DIR).resolve()
+    path = Path(file_path).resolve()
+
+    if not path.is_relative_to(dataset_root):
+        raise ValueError("Dataset path must be inside the configured data directory.")
+
     if not path.is_file():
-        raise FileNotFoundError(
-            f"Dataset not found: {path}"
-        )
+        raise FileNotFoundError("Dataset not found.")
     if path.stat().st_size == 0:
         raise ValueError("Dataset is empty.")
     max_bytes = MAX_UPLOAD_SIZE_MB * 1024 * 1024
