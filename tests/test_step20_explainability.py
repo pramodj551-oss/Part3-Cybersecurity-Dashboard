@@ -4,6 +4,7 @@ from pathlib import Path
 import warnings
 
 import numpy as np
+import pytest
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 
@@ -44,3 +45,12 @@ def test_step20_explainability_contract(tmp_path: Path):
         pass
     else:
         raise AssertionError("Unsupported estimator must raise ExplainabilityError")
+
+
+@pytest.mark.parametrize("bad_value", [np.nan, np.inf, -np.inf])
+def test_step20_rejects_non_finite_feature_importance(bad_value):
+    class FakeModel:
+        feature_importances_ = np.array([0.25, bad_value, 0.75])
+
+    with pytest.raises(ExplainabilityError, match="finite"):
+        extract_feature_importance(FakeModel(), ["a", "b", "c"])

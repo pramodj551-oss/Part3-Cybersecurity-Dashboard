@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 
@@ -44,15 +45,21 @@ def extract_feature_importance(model, feature_names) -> pd.DataFrame:
             "Model does not expose supported feature importance or coefficients."
         )
 
-    values = [float(value) for value in raw]
+    try:
+        values = np.asarray(raw, dtype=float).reshape(-1)
+    except (TypeError, ValueError) as error:
+        raise ExplainabilityError("Feature importance values must be numeric.") from error
+
     if len(values) != len(names):
         raise ExplainabilityError(
             f"Feature count ({len(names)}) does not match importance count ({len(values)})."
         )
-    if any(value < 0 for value in values):
+    if not np.isfinite(values).all():
+        raise ExplainabilityError("Feature importance values must be finite.")
+    if (values < 0).any():
         raise ExplainabilityError("Feature importance values must be non-negative.")
 
-    result = pd.DataFrame({"feature": names, "importance": values})
+    result = pd.DataFrame({"feature": names, "importance": values.tolist()})
     return result.sort_values(
         ["importance", "feature"], ascending=[False, True], kind="mergesort"
     ).reset_index(drop=True)

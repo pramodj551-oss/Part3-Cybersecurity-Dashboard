@@ -20,19 +20,23 @@ EDA | Explainability | Metrics | Prediction
 
 ## Repository Structure
 
-The following inventory reflects the current production repository structure. Generated runtime artifacts under `models/` and `outputs/` are kept external as described in the Runtime Artifact Contract below.
+This inventory reflects the tracked production repository, including the security/CI validation files and the six committed runtime artifacts protected by `models/artifact_manifest.json`.
 
 ```text
 Part3-Cybersecurity-Dashboard/
 ├── app.py
 ├── requirements.txt
+├── pytest.ini
+├── runtime.txt
 ├── README.md
 ├── LICENSE
 ├── CHANGELOG.md
+├── STEP_31B_SECURITY_NOTES.md
 ├── .gitignore
 ├── .github/
 │   └── workflows/
-│       └── ci.yml
+│       ├── ci.yml
+│       └── sync-part2-artifacts.yml
 ├── .streamlit/
 │   └── config.toml
 ├── assets/
@@ -44,9 +48,14 @@ Part3-Cybersecurity-Dashboard/
 ├── docs/
 │   └── STEP_20.md
 ├── models/
-│   └── [external runtime artifacts]
+│   ├── artifact_manifest.json
+│   ├── best_model.pkl
+│   ├── feature_columns.pkl
+│   └── preprocessor.pkl
 ├── outputs/
-│   └── [external runtime artifacts]
+│   ├── evaluation_report.json
+│   ├── feature_importance.csv
+│   └── metrics.json
 ├── pages/
 │   ├── Home.py
 │   ├── Dataset_Explorer.py
@@ -55,15 +64,18 @@ Part3-Cybersecurity-Dashboard/
 │   ├── Feature_Importance.py
 │   └── Model_Performance.py
 ├── scripts/
-│   └── smoke_test_prediction.py
+│   ├── smoke_test_prediction.py
+│   └── verify_repository_artifact_hashes.py
 ├── src/
 │   ├── arrow_compat.py
+│   ├── csv_security.py
 │   ├── dashboard.py
 │   ├── deployment_fingerprint.py
 │   ├── explainability.py
 │   ├── model_loader.py
 │   ├── prediction.py
 │   ├── preprocessing.py
+│   ├── runtime_artifact_identity.py
 │   ├── theme.py
 │   ├── upload_validation.py
 │   ├── utils.py
@@ -71,8 +83,12 @@ Part3-Cybersecurity-Dashboard/
 └── tests/
     ├── test_prediction_adversarial.py
     ├── test_prediction_ui.py
+    ├── test_runtime_artifact_identity.py
     ├── test_runtime_contract.py
     ├── test_step20_explainability.py
+    ├── test_step31b_marker.py
+    ├── test_step32_ci_privilege_contract.py
+    ├── test_step32_security_hardening.py
     └── test_upload_validation.py
 ```
 
@@ -106,7 +122,7 @@ The following post-incident fields are **excluded from prediction**: `downtime_h
 
 ## Runtime Artifact Contract
 
-Prediction requires these Part 2 artifacts:
+Prediction requires these three Part 2 artifacts:
 
 ```text
 models/best_model.pkl
@@ -122,9 +138,11 @@ outputs/metrics.json
 outputs/feature_importance.csv
 ```
 
-These generated runtime artifacts are intentionally external to this repository. The dashboard **does not create fake placeholders** when they are missing. `src/model_loader.py` fails closed with a clear error, while CI obtains the same pinned external runtime bundle used for validation.
+These six runtime artifacts are **currently committed to this repository** and their byte-level identity is recorded in `models/artifact_manifest.json`. CI verifies the committed artifact hashes before replacing them with the pinned Part 2 runtime bundle for the CI test environment. The manual sync workflow also verifies the pinned bundle before opening a PR with refreshed artifacts.
 
-Generate/sync the artifacts from the Part 2 pipeline before enabling production prediction.
+At runtime, `src/model_loader.py` fails closed if the manifest is missing, an expected artifact is missing/empty, or any artifact hash differs from the committed manifest. This prevents unverified local artifact replacement from reaching prediction.
+
+Generate/sync the artifacts from the Part 2 pipeline before changing the committed runtime bundle.
 
 ## Installation
 
@@ -149,38 +167,39 @@ The `pages/` directory is the authoritative Streamlit multipage UI. `app.py` is 
 ## Dashboard Modules
 
 - **Home** — project overview and runtime requirements.
-- **Dataset Explorer** — CSV upload, schema/quality summary, preview, missing-value analysis, and download.
+- **Dataset Explorer** — bounded CSV upload, schema/quality summary, preview, missing-value analysis, and download.
 - **EDA Dashboard** — interactive target distribution, correlations, descriptive statistics, and dataset information.
-- **Prediction** — CSV upload and inference using the fitted Part 2 artifacts.
+- **Prediction** — bounded CSV upload and inference using the fitted Part 2 artifacts.
 - **Feature Importance** — deterministic STEP 20 feature-importance artifact visualization.
 - **Model Performance** — regression MAE, RMSE, and R² metrics.
 
-## CI Validation
+## Security and CI Validation
 
 GitHub Actions is the authoritative source for execution evidence. README claims alone do not establish production readiness.
 
 CI validates:
 
 1. Python compilation for application, source, scripts, and tests.
-2. Application-module importability, including upload validation.
+2. Application-module importability, including upload and CSV security helpers.
 3. The committed raw-dataset path and required schema.
-4. A **pinned Part 2 runtime release** is downloaded on every test job; its manifest is required to contain exactly the six runtime artifacts listed above, and every artifact is SHA256-verified before being installed into `models/` and `outputs/` for the test run.
-5. The installed runtime model, preprocessor, and feature-column contract are loadable and structurally valid.
-6. A real prediction smoke test executes against the downloaded runtime artifacts.
-7. Unit tests, including the fail-closed runtime loader contract and STEP 20 explainability tests.
-8. A dependency vulnerability audit runs independently with `pip-audit`.
+4. The committed six-artifact manifest and SHA256 identity before CI replaces runtime artifacts.
+5. A **pinned Part 2 runtime release** is downloaded on every test job; its manifest must contain exactly the six runtime artifacts, and every artifact is SHA256-verified before installation.
+6. The installed runtime model, preprocessor, and feature-column contract are loadable and structurally valid.
+7. A real prediction smoke test executes against the downloaded runtime artifacts.
+8. Unit and adversarial tests cover runtime identity, bounded CSV parsing, prediction validation, STEP 20 explainability, and CI privilege contracts.
+9. A dependency vulnerability audit runs independently with `pip-audit`.
 
-**Important:** CI's successful artifact validation proves that the pinned external Part 2 runtime bundle is usable in the CI environment. It does **not** mean those generated artifacts are committed to this repository or automatically synchronized into a separate production deployment environment. The target deployment must have access to the compatible Part 2 runtime artifacts before prediction is enabled.
+The manual `sync-part2-artifacts.yml` workflow is restricted to `workflow_dispatch`, verifies the pinned bundle, updates a dedicated automation branch, and opens a PR to `main`; it does not directly push generated artifacts to `main`.
 
 ## STEP 20 — Explainability
 
-`src/explainability.py` provides deterministic model-native feature importance with a linear-coefficient fallback and writes the normalized `feature,importance` CSV contract used by the dashboard.
+`src/explainability.py` provides deterministic model-native feature importance with a linear-coefficient fallback and writes the normalized `feature,importance` CSV contract used by the dashboard. Non-finite importance values are rejected before they can reach the persisted artifact.
 
 ## Production Readiness Status
 
-**Source-code readiness:** CI-tested dashboard architecture.
+**Source-code readiness:** CI-tested dashboard architecture with bounded CSV parsing and runtime artifact identity enforcement.
 
-**Prediction readiness:** requires access to the three Part 2 runtime artifacts in `models/` (or an equivalent deployment-time synchronization mechanism).
+**Prediction readiness:** requires the committed six-artifact runtime contract to remain synchronized with `models/artifact_manifest.json`, or an approved deployment-time synchronization mechanism that produces the same verified contract.
 
 Therefore the repository must **not** be described as fully deployment-ready until artifact synchronization/access and an actual prediction smoke test have passed in the target deployment environment.
 
