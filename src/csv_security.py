@@ -20,13 +20,36 @@ class CSVSecurityError(ValueError):
     """Safe, user-facing error for rejected untrusted CSV input."""
 
 
+def _quote_is_unterminated(raw: bytes) -> bool:
+    """Detect an unclosed CSV quote without exposing parser internals."""
+    in_quotes = False
+    index = 0
+    while index < len(raw):
+        if raw[index] == 34:  # double quote
+            if in_quotes and index + 1 < len(raw) and raw[index + 1] == 34:
+                index += 2
+                continue
+            in_quotes = not in_quotes
+        index += 1
+    return in_quotes
+
+
 def _safe_reader(stream: BinaryIO):
     """Read CSV records with strict UTF-8 and bounded parser complexity."""
     try:
+        raw = stream.read()
+        if not isinstance(raw, (bytes, bytearray)):
+            raise CSVSecurityError("Unable to read the uploaded CSV.")
+        if _quote_is_unterminated(bytes(raw)):
+            raise CSVSecurityError("CSV contains an unterminated quoted field.")
         text = io.TextIOWrapper(
-            stream, encoding="utf-8-sig", errors="strict", newline=""
+            io.BytesIO(bytes(raw)), encoding="utf-8-sig", errors="strict", newline=""
         )
-    except (TypeError, ValueError) as error:
+    except UnicodeDecodeError as error:
+        raise CSVSecurityError("CSV must be valid UTF-8 text.") from error
+    except CSVSecurityError:
+        raise
+    except (OSError, TypeError, ValueError) as error:
         raise CSVSecurityError("Unable to read the uploaded CSV encoding.") from error
 
     old_limit = csv.field_size_limit()
@@ -47,9 +70,7 @@ def _safe_reader(stream: BinaryIO):
                     f"CSV exceeds the maximum of {MAX_CSV_ROWS:,} data rows."
                 )
             if any(len(field) > MAX_CSV_FIELD_LENGTH for field in row):
-                raise CSVSecurityError(
-                    "CSV field exceeds the configured maximum length."
-                )
+                raise CSVSecurityError("CSV field exceeds the configured maximum length.")
             total_cells += len(row)
             if total_cells > MAX_CSV_CELLS:
                 raise CSVSecurityError("CSV exceeds the configured cell limit.")
@@ -57,6 +78,9 @@ def _safe_reader(stream: BinaryIO):
     except UnicodeDecodeError as error:
         raise CSVSecurityError("CSV must be valid UTF-8 text.") from error
     except csv.Error as error:
+        message = str(error).lower()
+        if "field larger than field limit" in message:
+            raise CSVSecurityError("CSV field exceeds the configured maximum length.") from error
         raise CSVSecurityError("CSV structure is invalid or malformed.") from error
     except CSVSecurityError:
         raise
@@ -92,17 +116,22 @@ def read_bounded_csv(uploaded_file) -> pd.DataFrame:
         raise CSVSecurityError("No CSV file was uploaded.")
 
     try:
-        uploaded_file.seek(0)
-        rows = _safe_reader(uploaded_file)
+        if isinstance(uploaded_file, (bytes, bytearray)):
+            stream = io.BytesIO(bytes(uploaded_file))
+        else:
+            uploaded_file.seek(0)
+            stream = uploaded_file
+        rows = _safe_reader(stream)
     except CSVSecurityError:
         raise
     except (OSError, ValueError, TypeError) as error:
         raise CSVSecurityError("Unable to read the uploaded CSV.") from error
     finally:
-        try:
-            uploaded_file.seek(0)
-        except (OSError, ValueError, AttributeError):
-            pass
+        if not isinstance(uploaded_file, (bytes, bytearray)):
+            try:
+                uploaded_file.seek(0)
+            except (OSError, ValueError, AttributeError):
+                pass
 
     try:
         return pd.DataFrame(rows[1:], columns=rows[0])
