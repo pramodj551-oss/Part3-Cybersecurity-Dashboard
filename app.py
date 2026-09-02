@@ -3,6 +3,7 @@
 import streamlit as st
 
 from config.config import APP_ICON, APP_TITLE, LAYOUT, SIDEBAR_STATE
+from src.deployment_fingerprint import get_runtime_commit
 
 st.set_page_config(
     page_title=APP_TITLE,
@@ -30,6 +31,13 @@ col1, col2, col3 = st.columns(3)
 col1.metric("Problem", "Severity-score regression")
 col2.metric("Framework", "Streamlit")
 col3.metric("Version", "3.0")
+
+st.subheader("Deployment fingerprint")
+runtime_commit = get_runtime_commit()
+if len(runtime_commit) == 40 and all(c in "0123456789abcdef" for c in runtime_commit.lower()):
+    st.code(f"Running Commit: {runtime_commit}")
+else:
+    st.warning(f"Running Commit: {runtime_commit}")
 
 st.subheader("Available modules")
 modules = [
