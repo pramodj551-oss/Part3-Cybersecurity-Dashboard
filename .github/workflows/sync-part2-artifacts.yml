@@ -3,10 +3,6 @@ name: Sync Part 2 Runtime Artifacts
 on:
   workflow_dispatch:
 
-permissions:
-  contents: write
-  pull-requests: write
-
 env:
   PART2_REPOSITORY: "pramodj551-oss/Part2-Cybersecurity-ML-Pipeline"
   PART2_RELEASE_TAG: "part2-runtime-33513838252"
@@ -15,6 +11,9 @@ env:
 
 jobs:
   sync:
+    permissions:
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
