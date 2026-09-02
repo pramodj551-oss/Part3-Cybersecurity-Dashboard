@@ -1,151 +1,88 @@
-"""
-==========================================================
-AI-Powered Cybersecurity Dashboard
-Prediction Page
-Version: 3.0
-==========================================================
-"""
+"""Prediction page for Part 2 runtime inference."""
 
 import pandas as pd
 import streamlit as st
 
-from config.config import MAX_UPLOAD_SIZE_MB
-from src.prediction import predict_incident
+from config.config import MAX_UPLOAD_SIZE_MB, PREDICTION_FEATURES
+from src.prediction import PredictionEngine, predict_incident
 from src.upload_validation import validate_upload_size
-from src.arrow_compat import make_display_safe
 
 
 def render():
-
-    st.title("🤖 Cybersecurity Incident Prediction")
-
-    st.markdown(
-        """
-Upload a CSV file containing cybersecurity incidents to
-predict the incident severity using the trained machine
-learning model.
-        """
+    st.title("🔮 Severity Score Prediction")
+    st.write(
+        "Upload a CSV containing the required Part 2 prediction features. "
+        "Prediction uses the fitted Part 2 runtime artifacts."
     )
 
     uploaded_file = st.file_uploader(
-        "Upload CSV File",
+        "Upload incident CSV",
         type=["csv"],
-        key="prediction_upload"
+        help=f"Maximum file size: {MAX_UPLOAD_SIZE_MB} MB.",
     )
-
     if uploaded_file is None:
-
-        st.info("Please upload a CSV dataset.")
-
         return
 
     try:
-
-        validate_upload_size(
-            uploaded_file,
-            MAX_UPLOAD_SIZE_MB
-        )
-
+        validate_upload_size(uploaded_file, MAX_UPLOAD_SIZE_MB)
     except ValueError as error:
-
         st.error(str(error))
-
         return
 
     try:
-
         input_df = pd.read_csv(uploaded_file)
-
-    except Exception:
-
-        st.error(
-            "Unable to read the uploaded CSV file. "
-            "Please verify the file format."
-        )
-
+    except Exception as error:
+        st.error(f"Unable to read the uploaded CSV: {error}")
         return
-
-    st.success("Dataset loaded successfully.")
 
     st.subheader("Input Preview")
+    st.dataframe(input_df.head(10), width="stretch")
+    st.caption(f"Rows: {len(input_df):,} | Columns: {len(input_df.columns):,}")
 
-    st.dataframe(
-        make_display_safe(input_df.head()),
-        width="stretch"
-    )
-
-    st.write(f"Records Available: **{len(input_df)}**")
-
-    st.divider()
-
-    if st.button(
-        "Generate Predictions",
-        type="primary"
-    ):
-
-        with st.spinner("Running prediction..."):
-
-            try:
-
-                prediction_df = predict_incident(
-                    input_df
-                )
-
-                st.success(
-                    "Prediction completed successfully."
-                )
-
-                st.subheader("Prediction Results")
-
-                st.dataframe(
-                    make_display_safe(prediction_df),
-                    width="stretch"
-                )
-
-                st.download_button(
-
-                    label="Download Predictions",
-
-                    data=prediction_df.to_csv(
-                        index=False
-                    ),
-
-                    file_name="prediction_results.csv",
-
-                    mime="text/csv"
-
-                )
-
-                if (
-                    "Confidence"
-                    in prediction_df.columns
-                ):
-
-                    st.subheader(
-                        "Prediction Confidence"
-                    )
-
-                    st.progress(
-                        float(
-                            prediction_df[
-                                "Confidence"
-                            ].mean()
-                        )
-                    )
-
-                    st.metric(
-                        "Average Confidence",
-                        f"{prediction_df['Confidence'].mean()*100:.2f}%"
-                    )
-
-            except Exception:
-
+    if st.button("Generate Predictions", type="primary"):
+        try:
+            missing = [column for column in PREDICTION_FEATURES if column not in input_df.columns]
+            if missing:
                 st.error(
-                    "Prediction failed. Please verify the input data "
-                    "and try again."
+                    "Prediction input is missing required features: "
+                    + ", ".join(missing)
                 )
+                return
+
+            # Validate the exact production boundary before invoking the model so
+            # user-correctable input errors remain actionable in the UI.
+            validated_input = PredictionEngine.validate_input(input_df)
+            result = predict_incident(validated_input)
+        except ValueError as error:
+            st.error(f"Prediction input validation failed: {error}")
+            return
+        except FileNotFoundError:
+            st.error(
+                "Prediction runtime artifacts are unavailable. "
+                "Please sync the Part 2 model, preprocessor, and feature contract."
+            )
+            return
+        except RuntimeError as error:
+            st.error(f"Prediction runtime validation failed: {error}")
+            return
+        except Exception as error:
+            st.error(f"Prediction failed unexpectedly: {error}")
+            return
+
+        st.success("Predictions generated successfully.")
+        st.dataframe(result, width="stretch")
+        st.download_button(
+            "Download Predictions CSV",
+            data=result.to_csv(index=False).encode("utf-8"),
+            file_name="predictions.csv",
+            mime="text/csv",
+        )
+
+        if "Confidence" in result.columns:
+            st.subheader("Prediction Confidence")
+            st.progress(float(result["Confidence"].mean()))
+            st.caption(f"Average confidence: {result['Confidence'].mean():.2%}")
 
 
 if __name__ == "__main__":
-
     render()
