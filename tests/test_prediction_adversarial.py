@@ -227,7 +227,7 @@ def test_malformed_date_is_not_treated_as_a_prediction_feature():
 
 
 def test_model_loader_rejects_non_pickle_model_without_execution():
-    """Invalid artifact bytes must fail closed without an executable payload."""
+    """Untrusted custom artifact paths must be rejected by the identity gate."""
     tmp = ROOT / ".pytest_adversarial_tmp"
     tmp.mkdir(exist_ok=True)
     try:
@@ -244,7 +244,7 @@ def test_model_loader_rejects_non_pickle_model_without_execution():
             preprocessor_path=preprocessor_path,
             feature_columns_path=feature_columns_path,
         )
-        with pytest.raises(RuntimeError, match="Unable to load Part 2 artifacts"):
+        with pytest.raises(ModelArtifactError, match="identity verification failed"):
             loader.load()
     finally:
         for path in tmp.glob("*"):
