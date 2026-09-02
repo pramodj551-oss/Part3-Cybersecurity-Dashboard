@@ -75,6 +75,18 @@ outputs/
 *.json
 
 # ----------------------------------------------------------
+# Production runtime artifacts intentionally tracked
+# ----------------------------------------------------------
+!outputs/
+!models/best_model.pkl
+!models/preprocessor.pkl
+!models/feature_columns.pkl
+!models/artifact_manifest.json
+!outputs/evaluation_report.json
+!outputs/metrics.json
+!outputs/feature_importance.csv
+
+# ----------------------------------------------------------
 # Temporary Files
 # ----------------------------------------------------------
 *.tmp
