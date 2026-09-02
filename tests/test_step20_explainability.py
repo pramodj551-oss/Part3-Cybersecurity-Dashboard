@@ -1,6 +1,7 @@
 """STEP 20 consolidated validation for model explainability."""
 
 from pathlib import Path
+import warnings
 
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
@@ -23,7 +24,13 @@ def test_step20_explainability_contract(tmp_path: Path):
     assert tree_result["importance"].ge(0).all()
     assert tree_result["importance"].is_monotonic_decreasing
 
-    linear = LogisticRegression(random_state=42, max_iter=500).fit(x, y)
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r"scipy\.optimize: The `disp` and `iprint` options of the L-BFGS-B solver are deprecated in SciPy 1\.18\.0\.",
+            category=DeprecationWarning,
+        )
+        linear = LogisticRegression(random_state=42, max_iter=500).fit(x, y)
     linear_result = extract_feature_importance(linear, names)
     assert len(linear_result) == len(names)
     assert linear_result["importance"].ge(0).all()
