@@ -45,6 +45,7 @@ def test_extra_columns_do_not_change_prediction_contract():
 def test_non_numeric_required_feature_fails_closed():
     """A numeric production feature must not silently become a prediction."""
     data = _valid_prediction_frame()
+    data["records_affected"] = data["records_affected"].astype(object)
     data.loc[0, "records_affected"] = "definitely-not-a-number"
 
     with pytest.raises((ValueError, TypeError, RuntimeError)):
@@ -55,6 +56,7 @@ def test_malformed_numeric_values_fail_closed():
     """NaN/inf numeric inputs must not yield a normal prediction."""
     for value in [float("nan"), float("inf"), float("-inf")]:
         data = _valid_prediction_frame()
+        data["records_affected"] = data["records_affected"].astype(object)
         data.loc[0, "records_affected"] = value
         with pytest.raises((ValueError, TypeError, RuntimeError)):
             PredictionEngine().predict(data)
