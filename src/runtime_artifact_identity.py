@@ -6,7 +6,9 @@ import hashlib
 import json
 from pathlib import Path
 
-from config.config import BASE_DIR
+# Resolve the repository root from this module so runtime verification does not
+# depend on an optional configuration symbol being present in config.config.
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 EXPECTED_ARTIFACTS = (
     "models/best_model.pkl",
