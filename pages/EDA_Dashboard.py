@@ -7,8 +7,8 @@ Version: 3.0
 """
 
 import streamlit as st
-import pandas as pd
 
+from src.csv_security import CSVSecurityError, read_bounded_csv
 from src.visualization import visualizer
 from src.arrow_compat import make_display_safe
 
@@ -37,48 +37,28 @@ interactive visualizations.
         return
 
     try:
-
-        df = pd.read_csv(uploaded_file)
-
-    except Exception as error:
-
-        st.error(f"Unable to load dataset.\n\n{error}")
-
+        df = read_bounded_csv(uploaded_file)
+    except CSVSecurityError as error:
+        st.error(str(error))
         return
 
     st.success("Dataset loaded successfully.")
 
     st.divider()
 
-    # ------------------------------------------------------
-    # Dataset Overview
-    # ------------------------------------------------------
-
     visualizer.display_dataset_overview(df)
 
     st.divider()
 
-    # ------------------------------------------------------
-    # Dataset Preview
-    # ------------------------------------------------------
-
     visualizer.display_dataframe(df.head(10))
 
     st.divider()
-
-    # ------------------------------------------------------
-    # Missing Value Analysis
-    # ------------------------------------------------------
 
     st.subheader("Missing Value Analysis")
 
     visualizer.plot_missing_values(df)
 
     st.divider()
-
-    # ------------------------------------------------------
-    # Target Distribution
-    # ------------------------------------------------------
 
     target_column = st.selectbox(
         "Select Target Column",
@@ -92,19 +72,11 @@ interactive visualizations.
 
     st.divider()
 
-    # ------------------------------------------------------
-    # Correlation Heatmap
-    # ------------------------------------------------------
-
     st.subheader("Correlation Analysis")
 
     visualizer.plot_correlation(df)
 
     st.divider()
-
-    # ------------------------------------------------------
-    # Numerical Summary
-    # ------------------------------------------------------
 
     st.subheader("Descriptive Statistics")
 
@@ -115,22 +87,13 @@ interactive visualizations.
 
     st.divider()
 
-    # ------------------------------------------------------
-    # Data Types
-    # ------------------------------------------------------
-
     st.subheader("Dataset Information")
 
-    info = pd.DataFrame({
-
+    info = __import__("pandas").DataFrame({
         "Column": df.columns,
-
         "Data Type": df.dtypes.astype(str),
-
         "Missing": df.isnull().sum(),
-
         "Unique": df.nunique()
-
     })
 
     st.dataframe(
