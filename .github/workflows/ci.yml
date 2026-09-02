@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feature/step30a-reproducibility-output-contract
       - feature/step31b-csv-resource-abuse
   pull_request:
     branches: [main]
@@ -89,6 +90,8 @@ jobs:
           for relative in expected:
               destination = Path(relative); destination.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(root / relative, destination)
               print(f"PASS artifact: {relative}")
+          shutil.copy2(root / "artifact_manifest.json", Path("models/artifact_manifest.json"))
+          print("PASS runtime artifact manifest installed: models/artifact_manifest.json")
           print("PASS 6/6 Part 2 artifacts + SHA256 integrity contract")
           PY
       - name: Validate loaded runtime artifacts

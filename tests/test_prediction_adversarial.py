@@ -24,6 +24,7 @@ from src.upload_validation import validate_upload_size
 
 
 ROOT = Path(__file__).resolve().parents[1]
+GOLDEN_FIRST_PREDICTION = 4.669436934238102
 
 
 def _valid_prediction_frame() -> pd.DataFrame:
@@ -62,6 +63,15 @@ def test_same_input_is_deterministic_across_repeated_predictions():
     assert first.tolist() == second.tolist()
 
 
+def test_golden_prediction_reference_is_stable():
+    """The committed runtime artifacts must reproduce the known-good score."""
+    prediction = PredictionEngine().predict(_valid_prediction_frame())
+
+    assert len(prediction) == 1
+    assert np.isfinite(prediction).all()
+    assert float(prediction[0]) == pytest.approx(GOLDEN_FIRST_PREDICTION, rel=1e-12, abs=1e-12)
+
+
 def test_target_and_post_incident_fields_cannot_influence_prediction():
     """Target/post-incident values must be ignored by the inference contract."""
     source = pd.read_csv(DATASET_PATH, nrows=1)
@@ -95,9 +105,31 @@ def test_prediction_output_contract_is_stable():
     result = PredictionEngine().predict_with_summary(_valid_prediction_frame())
 
     assert "Predicted_Severity_Score" in result.columns
+    assert list(result.columns) == list(_valid_prediction_frame().columns) + ["Predicted_Severity_Score"]
     assert len(result) == 1
     assert pd.api.types.is_numeric_dtype(result["Predicted_Severity_Score"])
     assert np.isfinite(result["Predicted_Severity_Score"].to_numpy(dtype=float)).all()
+
+
+def test_prediction_download_csv_round_trip_preserves_output_schema():
+    """The actual downloadable CSV representation must round-trip its schema."""
+    result = PredictionEngine().predict_with_summary(_valid_prediction_frame())
+    encoded = result.to_csv(index=False).encode("utf-8")
+    restored = pd.read_csv(io.BytesIO(encoded))
+
+    assert list(restored.columns) == list(result.columns)
+    assert len(restored) == len(result)
+    assert np.isfinite(restored["Predicted_Severity_Score"].to_numpy(dtype=float)).all()
+    assert float(restored.loc[0, "Predicted_Severity_Score"]) == pytest.approx(
+        GOLDEN_FIRST_PREDICTION, rel=1e-12, abs=1e-12
+    )
+
+
+def test_prediction_output_is_numeric_and_finite():
+    """Model output must never silently become NaN, inf, or non-numeric data."""
+    prediction = PredictionEngine().predict(_valid_prediction_frame())
+    assert np.issubdtype(np.asarray(prediction).dtype, np.number)
+    assert np.isfinite(np.asarray(prediction, dtype=float)).all()
 
 
 def test_non_numeric_required_feature_fails_closed():
