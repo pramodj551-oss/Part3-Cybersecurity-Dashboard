@@ -14,6 +14,9 @@ joblib==1.4.2
 # Dashboard
 streamlit>=1.46.0
 
+# Streamlit runtime compatibility — avoid pyarrow 25.x known segfault
+pyarrow<25
+
 # Visualization
 matplotlib>=3.9.0
 plotly>=5.24.0
