@@ -7,6 +7,7 @@ on:
       - feature/step30a-reproducibility-output-contract
       - feature/step31b-csv-resource-abuse
       - feature/step31-end-to-end-security-audit
+      - feature/step32-cicd-deployment-hardening
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -36,9 +37,11 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --upgrade "pip==25.0.1"
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m pip install --disable-pip-version-check "pytest==8.3.5"
+          python -m pip check
       - name: Compile Python sources
         run: python -m compileall -q app.py config pages src tests scripts
       - name: Smoke-test imports
@@ -113,10 +116,12 @@ jobs:
       - name: Real prediction smoke test
         run: python scripts/smoke_test_prediction.py
       - name: Run unit tests
-        run: pytest -q
+        run: python -m pytest -q
 
   dependency-audit:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
@@ -124,8 +129,10 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pip-audit
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --upgrade "pip==25.0.1"
+          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m pip install --disable-pip-version-check "pip-audit==2.7.3"
+          python -m pip check
       - name: Dependency vulnerability scan
-        run: pip-audit -r requirements.txt
+        run: python -m pip_audit -r requirements.txt
