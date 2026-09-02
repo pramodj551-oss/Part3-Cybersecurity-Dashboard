@@ -42,7 +42,7 @@ class ModelLoader:
         """Load feature_columns.pkl from Part 2's pickle/joblib formats.
 
         Part 2 may serialize this simple Python sequence with either
-        ``pickle.dump`` or ``joblib.dump``.  Prefer the standard pickle
+        ``pickle.dump`` or ``joblib.dump``. Prefer the standard pickle
         protocol first, then fall back to joblib for compatibility.
         """
         pickle_error = None
@@ -110,5 +110,9 @@ class ModelLoader:
 
 def load_runtime_artifacts():
     """Load production artifacts through the identity-gated ModelLoader."""
-    loader = ModelLoader().load()
+    loader = ModelLoader(
+        model_path=MODEL_PATH,
+        preprocessor_path=PREPROCESSOR_PATH,
+        feature_columns_path=FEATURE_COLUMNS_PATH,
+    ).load()
     return loader.model, loader.preprocessor, loader.feature_columns
