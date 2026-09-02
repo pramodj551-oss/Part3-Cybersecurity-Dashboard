@@ -1,0 +1,30 @@
+[
+    {
+        "Metric": "MAE",
+        "Value": 1.029457661580837
+    },
+    {
+        "Metric": "MSE",
+        "Value": 1.6439682374875169
+    },
+    {
+        "Metric": "RMSE",
+        "Value": 1.2821732478442673
+    },
+    {
+        "Metric": "R2 Score",
+        "Value": 0.4440361871544425
+    },
+    {
+        "Metric": "MAPE",
+        "Value": 0.18153700769670347
+    },
+    {
+        "Metric": "Explained Variance",
+        "Value": 0.44902075183505674
+    },
+    {
+        "Metric": "Max Error",
+        "Value": 3.5664355441943103
+    }
+]

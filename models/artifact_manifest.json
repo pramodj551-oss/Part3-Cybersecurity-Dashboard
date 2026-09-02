@@ -1,0 +1,13 @@
+{
+  "source_repository": "pramodj551-oss/Part2-Cybersecurity-ML-Pipeline",
+  "source_release_tag": "part2-runtime-33513838252",
+  "bundle_name": "part2-runtime-bundle.zip",
+  "files": {
+    "models/best_model.pkl": "ca26113983a882b1b72ff619eb3c7eb64a379352a96521e3ca9c1845c1823c62",
+    "models/preprocessor.pkl": "5edeced95052788e42d8ea4324ff24d2d58afc4886897c2effc87ebf9ce348ba",
+    "models/feature_columns.pkl": "67582cd2c06082b290350a54177032410428b1b48a6e1f2d2067e53f8c2f5aff",
+    "outputs/evaluation_report.json": "83e2bd6fc191eb14257f44c8c76340e0bf92af13af0ed9ba24a5815b7a3ec59d",
+    "outputs/metrics.json": "d26201cbebd7321343619c09e6d384adef2ca4d7411d9eb757fda59a203f13eb",
+    "outputs/feature_importance.csv": "a5dbba7dab6a86ac184d84e450ce6ef4873774f8a7a3706485720995abe6ca16"
+  }
+}

@@ -1,0 +1,34 @@
+[
+    {
+        "Model": "Linear Regression",
+        "MAE": 1.0295,
+        "RMSE": 1.2822,
+        "R2 Score": 0.444,
+        "CV Mean": 0.3999,
+        "CV Std": 0.0458
+    },
+    {
+        "Model": "Gradient Boosting",
+        "MAE": 1.0656,
+        "RMSE": 1.3196,
+        "R2 Score": 0.4111,
+        "CV Mean": 0.3481,
+        "CV Std": 0.0456
+    },
+    {
+        "Model": "Random Forest",
+        "MAE": 1.0442,
+        "RMSE": 1.2847,
+        "R2 Score": 0.4419,
+        "CV Mean": 0.3282,
+        "CV Std": 0.0542
+    },
+    {
+        "Model": "Decision Tree",
+        "MAE": 1.2637,
+        "RMSE": 1.552,
+        "R2 Score": 0.1854,
+        "CV Mean": 0.0459,
+        "CV Std": 0.1349
+    }
+]
