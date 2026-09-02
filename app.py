@@ -4,6 +4,7 @@ import streamlit as st
 
 from config.config import APP_ICON, APP_TITLE, LAYOUT, SIDEBAR_STATE
 from src.deployment_fingerprint import get_runtime_commit
+from src.runtime_artifact_identity import verify_runtime_artifact_identity
 
 st.set_page_config(
     page_title=APP_TITLE,
@@ -38,6 +39,16 @@ if len(runtime_commit) == 40 and all(c in "0123456789abcdef" for c in runtime_co
     st.code(f"Running Commit: {runtime_commit}")
 else:
     st.warning(f"Running Commit: {runtime_commit}")
+
+st.subheader("Runtime artifact identity")
+identity_ok, runtime_hashes, identity_message = verify_runtime_artifact_identity()
+if identity_ok:
+    st.success(f"PASS: {identity_message}")
+    with st.expander("Runtime SHA-256 values"):
+        for relative, digest in runtime_hashes.items():
+            st.code(f"{relative} = {digest}")
+else:
+    st.error(f"FAIL: {identity_message}")
 
 st.subheader("Available modules")
 modules = [
