@@ -4,6 +4,8 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
+from src.arrow_compat import make_display_safe
+
 
 class DashboardVisualizer:
     """Visualization utilities for dashboard pages."""
@@ -19,7 +21,7 @@ class DashboardVisualizer:
     @staticmethod
     def display_dataframe(df: pd.DataFrame):
         st.subheader("Dataset Preview")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(make_display_safe(df), width="stretch")
 
     @staticmethod
     def plot_missing_values(df: pd.DataFrame):
@@ -34,7 +36,7 @@ class DashboardVisualizer:
             labels={"x": "Features", "y": "Missing Values"},
             title="Missing Value Analysis",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     @staticmethod
     def plot_target_distribution(df: pd.DataFrame, target_column: str):
@@ -42,7 +44,7 @@ class DashboardVisualizer:
             st.warning("Target column not found.")
             return
         fig = px.histogram(df, x=target_column, title="Target Variable Distribution")
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     @staticmethod
     def plot_correlation(df: pd.DataFrame):
@@ -57,7 +59,7 @@ class DashboardVisualizer:
             aspect="auto",
             title="Correlation Heatmap",
         )
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     @staticmethod
     def plot_feature_importance(importance_df: pd.DataFrame):
@@ -84,7 +86,7 @@ class DashboardVisualizer:
             title="Feature Importance",
         )
         fig.update_layout(yaxis={"categoryorder": "total ascending"})
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
 
 visualizer = DashboardVisualizer()
