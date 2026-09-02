@@ -20,6 +20,8 @@ EDA | Explainability | Metrics | Prediction
 
 ## Repository Structure
 
+The following inventory reflects the current production repository structure. Generated runtime artifacts under `models/` and `outputs/` are kept external as described in the Runtime Artifact Contract below.
+
 ```text
 Part3-Cybersecurity-Dashboard/
 ├── app.py
@@ -27,11 +29,24 @@ Part3-Cybersecurity-Dashboard/
 ├── README.md
 ├── LICENSE
 ├── CHANGELOG.md
-├── .github/workflows/ci.yml
-├── .streamlit/config.toml
-├── config/config.py
-├── data/raw/cybersecurity_incident_reports.csv
-├── docs/STEP_20.md
+├── .gitignore
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+├── .streamlit/
+│   └── config.toml
+├── assets/
+├── config/
+│   └── config.py
+├── data/
+│   └── raw/
+│       └── cybersecurity_incident_reports.csv
+├── docs/
+│   └── STEP_20.md
+├── models/
+│   └── [external runtime artifacts]
+├── outputs/
+│   └── [external runtime artifacts]
 ├── pages/
 │   ├── Home.py
 │   ├── Dataset_Explorer.py
@@ -39,17 +54,31 @@ Part3-Cybersecurity-Dashboard/
 │   ├── Prediction.py
 │   ├── Feature_Importance.py
 │   └── Model_Performance.py
+├── scripts/
+│   └── smoke_test_prediction.py
 ├── src/
+│   ├── arrow_compat.py
 │   ├── dashboard.py
+│   ├── deployment_fingerprint.py
 │   ├── explainability.py
 │   ├── model_loader.py
 │   ├── prediction.py
 │   ├── preprocessing.py
 │   ├── theme.py
+│   ├── upload_validation.py
 │   ├── utils.py
 │   └── visualization.py
 └── tests/
+    ├── test_prediction_adversarial.py
+    ├── test_prediction_ui.py
+    ├── test_runtime_contract.py
+    ├── test_step20_explainability.py
+    └── test_upload_validation.py
 ```
+
+### Structure maintenance rule
+
+This inventory is intended to describe tracked source/configuration files and the repository's functional directories. When production source files, CI scripts, or tests are added or removed, this section must be updated in the same change so README structure claims remain synchronized with the actual repository.
 
 ## Dataset Contract
 
