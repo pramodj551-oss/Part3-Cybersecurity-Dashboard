@@ -45,7 +45,7 @@ machine learning architecture.
     with col2:
         st.metric(
             "Model",
-            "Random Forest"
+            "Part 2 Runtime"
         )
 
     with col3:
