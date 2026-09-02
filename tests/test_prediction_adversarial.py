@@ -18,7 +18,7 @@ from config.config import (
     PREDICTION_FEATURES,
     PREDICTION_NUMERIC_LIMITS,
 )
-from src.model_loader import ModelLoader
+from src.model_loader import ModelArtifactError, ModelLoader
 from src.prediction import PredictionEngine
 from src.upload_validation import validate_upload_size
 
