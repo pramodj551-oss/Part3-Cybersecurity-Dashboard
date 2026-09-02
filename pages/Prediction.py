@@ -1,9 +1,9 @@
 """Prediction page for Part 2 runtime inference."""
 
-import pandas as pd
 import streamlit as st
 
 from config.config import MAX_UPLOAD_SIZE_MB, PREDICTION_FEATURES
+from src.csv_security import CSVSecurityError, read_bounded_csv
 from src.prediction import PredictionEngine, predict_incident
 from src.upload_validation import validate_upload_size
 
@@ -30,9 +30,9 @@ def render():
         return
 
     try:
-        input_df = pd.read_csv(uploaded_file)
-    except Exception as error:
-        st.error(f"Unable to read the uploaded CSV: {error}")
+        input_df = read_bounded_csv(uploaded_file)
+    except CSVSecurityError as error:
+        st.error(str(error))
         return
 
     st.subheader("Input Preview")
@@ -60,11 +60,11 @@ def render():
                 "Please sync the Part 2 model, preprocessor, and feature contract."
             )
             return
-        except RuntimeError as error:
-            st.error(f"Prediction runtime validation failed: {error}")
+        except RuntimeError:
+            st.error("Prediction runtime validation failed.")
             return
-        except Exception as error:
-            st.error(f"Prediction failed unexpectedly: {error}")
+        except Exception:
+            st.error("Prediction failed unexpectedly.")
             return
 
         st.success("Predictions generated successfully.")
