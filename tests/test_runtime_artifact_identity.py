@@ -138,7 +138,17 @@ def test_wrong_manifest_structure_fails_closed(monkeypatch, tmp_path, manifest_p
     assert "exactly the six expected artifacts" in message
 
 
-def test_runtime_loader_refuses_to_deserialize_when_identity_fails(monkeypatch):
+def test_runtime_loader_refuses_to_deserialize_when_identity_fails(monkeypatch, tmp_path):
+    """The wrapper must enforce identity before deserialization."""
+    production_model = tmp_path / "best_model.pkl"
+    production_preprocessor = tmp_path / "preprocessor.pkl"
+    production_features = tmp_path / "feature_columns.pkl"
+    for path in (production_model, production_preprocessor, production_features):
+        path.write_bytes(b"untrusted-artifact")
+
+    monkeypatch.setattr(model_loader, "MODEL_PATH", production_model)
+    monkeypatch.setattr(model_loader, "PREPROCESSOR_PATH", production_preprocessor)
+    monkeypatch.setattr(model_loader, "FEATURE_COLUMNS_PATH", production_features)
     monkeypatch.setattr(
         model_loader,
         "verify_runtime_artifact_identity",
@@ -167,6 +177,9 @@ def test_direct_model_loader_refuses_to_deserialize_when_identity_fails(monkeypa
     for path in (model_path, preprocessor_path, feature_columns_path):
         path.write_bytes(b"untrusted-artifact")
 
+    monkeypatch.setattr(model_loader, "MODEL_PATH", model_path)
+    monkeypatch.setattr(model_loader, "PREPROCESSOR_PATH", preprocessor_path)
+    monkeypatch.setattr(model_loader, "FEATURE_COLUMNS_PATH", feature_columns_path)
     monkeypatch.setattr(
         model_loader,
         "verify_runtime_artifact_identity",
