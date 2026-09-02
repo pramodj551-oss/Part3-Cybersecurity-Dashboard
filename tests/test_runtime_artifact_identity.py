@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from src import model_loader
 from src import runtime_artifact_identity as identity
 
 
@@ -135,3 +136,24 @@ def test_wrong_manifest_structure_fails_closed(monkeypatch, tmp_path, manifest_p
 
     assert ok is False
     assert "exactly the six expected artifacts" in message
+
+
+def test_runtime_loader_refuses_to_deserialize_when_identity_fails(monkeypatch):
+    monkeypatch.setattr(
+        model_loader,
+        "verify_runtime_artifact_identity",
+        lambda: (False, {}, "hash mismatch: models/best_model.pkl"),
+    )
+    load_called = False
+
+    def fail_if_called(self):
+        nonlocal load_called
+        load_called = True
+        raise AssertionError("ModelLoader must not deserialize unverified artifacts")
+
+    monkeypatch.setattr(model_loader.ModelLoader, "get_artifacts", fail_if_called)
+
+    with pytest.raises(model_loader.ModelArtifactError, match="identity verification failed"):
+        model_loader.load_runtime_artifacts()
+
+    assert load_called is False
