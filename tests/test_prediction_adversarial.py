@@ -8,10 +8,15 @@ from pathlib import Path
 import io
 import pickle
 
+import numpy as np
 import pandas as pd
 import pytest
 
-from config.config import DATASET_PATH, PREDICTION_FEATURES
+from config.config import (
+    DATASET_PATH,
+    EXCLUDED_POST_INCIDENT_FEATURES,
+    PREDICTION_FEATURES,
+)
 from src.model_loader import ModelLoader
 from src.prediction import PredictionEngine
 from src.upload_validation import validate_upload_size
@@ -40,6 +45,58 @@ def test_extra_columns_do_not_change_prediction_contract():
 
     assert len(base_prediction) == len(extra_prediction) == 1
     assert float(base_prediction[0]) == pytest.approx(float(extra_prediction[0]))
+
+
+def test_same_input_is_deterministic_across_repeated_predictions():
+    """The same input and immutable runtime artifacts must yield the same score."""
+    data = _valid_prediction_frame()
+    engine = PredictionEngine()
+
+    first = engine.predict(data)
+    second = engine.predict(data.copy())
+
+    assert len(first) == len(second) == 1
+    assert np.isfinite(first).all()
+    assert np.isfinite(second).all()
+    assert first.tolist() == second.tolist()
+
+
+def test_target_and_post_incident_fields_cannot_influence_prediction():
+    """Target/post-incident values must be ignored by the inference contract."""
+    source = pd.read_csv(DATASET_PATH, nrows=1)
+    required = list(PREDICTION_FEATURES)
+    missing = [c for c in required if c not in source.columns]
+    if missing:
+        pytest.fail(f"Production dataset is missing prediction features: {missing}")
+
+    base = source.copy()
+    mutated = source.copy()
+
+    if "severity_score" in mutated.columns:
+        mutated.loc[mutated.index[0], "severity_score"] = 999999.0
+    for column in EXCLUDED_POST_INCIDENT_FEATURES:
+        if column not in mutated.columns:
+            continue
+        if pd.api.types.is_numeric_dtype(mutated[column]):
+            mutated.loc[mutated.index[0], column] = 999999.0
+        else:
+            mutated.loc[mutated.index[0], column] = "attacker-mutated-value"
+
+    engine = PredictionEngine()
+    base_prediction = engine.predict(base)
+    mutated_prediction = engine.predict(mutated)
+
+    assert base_prediction.tolist() == mutated_prediction.tolist()
+
+
+def test_prediction_output_contract_is_stable():
+    """Prediction summary must expose the stable production output column."""
+    result = PredictionEngine().predict_with_summary(_valid_prediction_frame())
+
+    assert "Predicted_Severity_Score" in result.columns
+    assert len(result) == 1
+    assert pd.api.types.is_numeric_dtype(result["Predicted_Severity_Score"])
+    assert np.isfinite(result["Predicted_Severity_Score"].to_numpy(dtype=float)).all()
 
 
 def test_non_numeric_required_feature_fails_closed():
