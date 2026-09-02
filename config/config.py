@@ -47,6 +47,16 @@ EXCLUDED_POST_INCIDENT_FEATURES = [
     "resolved_within_7_days",
 ]
 
+# Explicit inference-domain limits prevent finite but nonsensical numeric
+# payloads from reaching preprocessing/model execution.
+PREDICTION_NUMERIC_LIMITS = {
+    "records_affected": (0.0, 1_000_000_000.0),
+    "detection_time_hours": (0.0, 876_000.0),
+    "ransom_demand_usd": (0.0, 1_000_000_000_000.0),
+    "data_exfiltration": (0.0, 1.0),
+    "zero_day_used": (0.0, 1.0),
+}
+
 LOG_FILE = LOGS_DIR / "dashboard.log"
 LOG_LEVEL = "INFO"
 APP_TITLE = "AI-Powered Cybersecurity Dashboard"
