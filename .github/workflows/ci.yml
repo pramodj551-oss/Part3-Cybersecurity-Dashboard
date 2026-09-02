@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - feature/step31b-csv-resource-abuse
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -40,7 +42,7 @@ jobs:
         run: |
           python - <<'PY'
           import importlib
-          modules = ["app", "pages.Dataset_Explorer", "pages.EDA_Dashboard", "pages.Feature_Importance", "pages.Home", "pages.Model_Performance", "pages.Prediction", "src.dashboard", "src.explainability", "src.model_loader", "src.prediction", "src.preprocessing", "src.theme", "src.utils", "src.upload_validation", "src.visualization"]
+          modules = ["app", "pages.Dataset_Explorer", "pages.EDA_Dashboard", "pages.Feature_Importance", "pages.Home", "pages.Model_Performance", "pages.Prediction", "src.csv_security", "src.dashboard", "src.explainability", "src.model_loader", "src.prediction", "src.preprocessing", "src.theme", "src.upload_validation", "src.utils", "src.visualization"]
           for module in modules:
               importlib.import_module(module)
               print(f"PASS import: {module}")
