@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m pip install --upgrade pip
+          python -m pip install --disable-pip-version-check --upgrade "pip==25.0.1"
           python -m pip install \
             "pandas==2.2.2" \
             "numpy==1.26.4" \
