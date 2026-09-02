@@ -16,6 +16,7 @@ from config.config import (
     DATASET_PATH,
     EXCLUDED_POST_INCIDENT_FEATURES,
     PREDICTION_FEATURES,
+    PREDICTION_NUMERIC_LIMITS,
 )
 from src.model_loader import ModelLoader
 from src.prediction import PredictionEngine
@@ -117,6 +118,38 @@ def test_malformed_numeric_values_fail_closed():
         data.loc[0, "records_affected"] = value
         with pytest.raises(ValueError, match="contains NaN or infinite values"):
             PredictionEngine.validate_input(data)
+
+
+def test_finite_numeric_magnitude_above_contract_fails_closed():
+    """Finite but nonsensical magnitudes must be rejected before preprocessing."""
+    for column, (_, maximum) in PREDICTION_NUMERIC_LIMITS.items():
+        data = _valid_prediction_frame()
+        data[column] = data[column].astype(object)
+        data.loc[0, column] = maximum + 1.0
+        with pytest.raises(ValueError, match="outside the allowed range"):
+            PredictionEngine.validate_input(data)
+
+
+def test_negative_numeric_magnitude_below_contract_fails_closed():
+    """Impossible negative values must be rejected before preprocessing."""
+    for column, (minimum, _) in PREDICTION_NUMERIC_LIMITS.items():
+        data = _valid_prediction_frame()
+        data[column] = data[column].astype(object)
+        data.loc[0, column] = minimum - 1.0
+        with pytest.raises(ValueError, match="outside the allowed range"):
+            PredictionEngine.validate_input(data)
+
+
+def test_numeric_range_boundary_values_are_accepted():
+    """Configured numeric boundaries are inclusive and therefore testable."""
+    data = _valid_prediction_frame()
+    for column, (minimum, maximum) in PREDICTION_NUMERIC_LIMITS.items():
+        data.loc[0, column] = minimum
+        data.loc[0, column] = maximum
+    validated = PredictionEngine.validate_input(data)
+    for column, (minimum, maximum) in PREDICTION_NUMERIC_LIMITS.items():
+        assert float(validated.loc[0, column]) == maximum
+        assert minimum <= float(validated.loc[0, column]) <= maximum
 
 
 def test_empty_prediction_frame_is_rejected():
