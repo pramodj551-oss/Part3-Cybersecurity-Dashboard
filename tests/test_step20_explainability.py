@@ -27,8 +27,8 @@ def test_step20_explainability_contract(tmp_path: Path):
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore",
-            message=r"scipy\.optimize: The `disp` and `iprint` options of the L-BFGS-B solver are deprecated in SciPy 1\.18\.0\.",
             category=DeprecationWarning,
+            module=r"sklearn\.linear_model\._logistic",
         )
         linear = LogisticRegression(random_state=42, max_iter=500).fit(x, y)
     linear_result = extract_feature_importance(linear, names)
