@@ -6,6 +6,7 @@ Version: 3.0
 ==========================================================
 """
 
+import pandas as pd
 import streamlit as st
 
 from src.csv_security import CSVSecurityError, read_bounded_csv
@@ -45,69 +46,45 @@ interactive visualizations.
     st.success("Dataset loaded successfully.")
 
     st.divider()
-
     visualizer.display_dataset_overview(df)
-
     st.divider()
-
     visualizer.display_dataframe(df.head(10))
-
     st.divider()
 
     st.subheader("Missing Value Analysis")
-
     visualizer.plot_missing_values(df)
-
     st.divider()
 
     target_column = st.selectbox(
         "Select Target Column",
         df.columns
     )
-
-    visualizer.plot_target_distribution(
-        df,
-        target_column
-    )
-
+    visualizer.plot_target_distribution(df, target_column)
     st.divider()
 
     st.subheader("Correlation Analysis")
-
     visualizer.plot_correlation(df)
-
     st.divider()
 
     st.subheader("Descriptive Statistics")
-
     st.dataframe(
         make_display_safe(df.describe(include="all")),
         width="stretch"
     )
-
     st.divider()
 
     st.subheader("Dataset Information")
-
-    info = __import__("pandas").DataFrame({
+    info = pd.DataFrame({
         "Column": df.columns,
         "Data Type": df.dtypes.astype(str),
         "Missing": df.isnull().sum(),
         "Unique": df.nunique()
     })
-
-    st.dataframe(
-        info,
-        width="stretch"
-    )
-
+    st.dataframe(info, width="stretch")
     st.divider()
 
-    st.success(
-        "EDA completed successfully."
-    )
+    st.success("EDA completed successfully.")
 
 
 if __name__ == "__main__":
-
     render()
