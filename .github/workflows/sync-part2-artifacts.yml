@@ -2,19 +2,15 @@ name: Sync Part 2 Runtime Artifacts
 
 on:
   workflow_dispatch:
-    inputs:
-      part2_release_tag:
-        description: "Immutable Part 2 runtime release tag"
-        required: true
-        default: "part2-runtime-33513838252"
-        type: string
 
 permissions:
   contents: write
 
 env:
   PART2_REPOSITORY: "pramodj551-oss/Part2-Cybersecurity-ML-Pipeline"
+  PART2_RELEASE_TAG: "part2-runtime-33513838252"
   PART2_BUNDLE_NAME: "part2-runtime-bundle.zip"
+  PART2_BUNDLE_SHA256: "ece2b6bf91f19e5c0eb19475ae7198155f3fdaa4e8839ec9ab95f8cfcf031d54"
 
 jobs:
   sync:
@@ -47,19 +43,23 @@ jobs:
           print(f"PASS runtime dependencies: joblib={joblib.__version__}, numpy={numpy.__version__}, pandas={pandas.__version__}, scikit-learn={sklearn.__version__}")
           PY
 
-      - name: Download immutable Part 2 runtime release
+      - name: Download pinned Part 2 runtime release
         shell: bash
-        env:
-          PART2_RELEASE_TAG: ${{ inputs.part2_release_tag }}
         run: |
           set -euo pipefail
           mkdir -p .part2-runtime/extracted
           url="https://github.com/${PART2_REPOSITORY}/releases/download/${PART2_RELEASE_TAG}/${PART2_BUNDLE_NAME}"
           curl --fail-with-body --silent --show-error --location "$url" -o .part2-runtime/artifacts.zip
+          actual_sha256="$(sha256sum .part2-runtime/artifacts.zip | cut -d' ' -f1)"
+          if [[ "$actual_sha256" != "$PART2_BUNDLE_SHA256" ]]; then
+            echo "FAIL Part 2 bundle SHA256: $actual_sha256 != $PART2_BUNDLE_SHA256"
+            exit 1
+          fi
+          echo "PASS Part 2 bundle SHA256: $actual_sha256"
           unzip -q .part2-runtime/artifacts.zip -d .part2-runtime/extracted
           rm -f .part2-runtime/artifacts.zip
           test -s .part2-runtime/extracted/artifact_manifest.json
-          echo "PASS downloaded immutable Part 2 runtime release: ${PART2_RELEASE_TAG}"
+          echo "PASS downloaded verified Part 2 runtime release: ${PART2_RELEASE_TAG}"
 
       - name: Verify SHA256 integrity and install six-file contract
         shell: bash
@@ -105,15 +105,15 @@ jobs:
 
           manifest_out = {
               "source_repository": "pramodj551-oss/Part2-Cybersecurity-ML-Pipeline",
-              "source_release_tag": "${{ inputs.part2_release_tag }}",
+              "source_release_tag": "part2-runtime-33513838252",
               "bundle_name": "part2-runtime-bundle.zip",
+              "bundle_sha256": "ece2b6bf91f19e5c0eb19475ae7198155f3fdaa4e8839ec9ab95f8cfcf031d54",
               "files": files,
           }
           Path("models/artifact_manifest.json").write_text(
               json.dumps(manifest_out, indent=2) + "\n", encoding="utf-8"
           )
           print("PASS 6/6 Part 2 artifacts + SHA256 integrity contract")
-          PY
 
       - name: Validate loaded runtime artifacts
         run: |
