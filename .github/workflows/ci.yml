@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feature/step30a-reproducibility-output-contract
       - feature/step31b-csv-resource-abuse
   pull_request:
     branches: [main]
