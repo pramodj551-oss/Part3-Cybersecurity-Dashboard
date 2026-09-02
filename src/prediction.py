@@ -30,15 +30,29 @@ class PredictionEngine:
                 + ", ".join(missing)
             )
 
-        for column in PREDICTION_FEATURES:
-            if pd.api.types.is_numeric_dtype(data[column]):
-                values = data[column].to_numpy(dtype=float, na_value=np.nan)
-                if not np.isfinite(values).all():
-                    raise ValueError(
-                        f"Prediction feature '{column}' contains NaN or infinite values."
-                    )
+        validated = data.copy()
+        numeric_features = [
+            "records_affected",
+            "detection_time_hours",
+            "ransom_demand_usd",
+            "data_exfiltration",
+            "zero_day_used",
+        ]
+        for column in numeric_features:
+            try:
+                values = pd.to_numeric(validated[column], errors="raise")
+            except (TypeError, ValueError) as error:
+                raise ValueError(
+                    f"Prediction feature '{column}' must contain numeric values."
+                ) from error
+            values = values.to_numpy(dtype=float, na_value=np.nan)
+            if not np.isfinite(values).all():
+                raise ValueError(
+                    f"Prediction feature '{column}' contains NaN or infinite values."
+                )
+            validated[column] = values
 
-        return data.copy()
+        return validated
 
     def transform(self, data: pd.DataFrame):
         raw = self.validate_input(data)

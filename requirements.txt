@@ -10,6 +10,7 @@ numpy==1.26.4
 # Machine Learning — MUST match the Part 2 serialization environment
 scikit-learn==1.5.1
 joblib==1.4.2
+scipy<1.17
 
 # Dashboard
 streamlit>=1.46.0
