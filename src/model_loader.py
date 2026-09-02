@@ -65,6 +65,14 @@ class ModelLoader:
         self._require(self.model_path, "Trained regression model")
         self._require(self.preprocessor_path, "Preprocessor")
         self._require(self.feature_columns_path, "Feature column contract")
+
+        ok, _, message = verify_runtime_artifact_identity()
+        if not ok:
+            raise ModelArtifactError(
+                "Runtime artifact identity verification failed; refusing to deserialize artifacts. "
+                f"{message}"
+            )
+
         try:
             model = joblib.load(self.model_path)
             preprocessor = joblib.load(self.preprocessor_path)
@@ -91,11 +99,5 @@ class ModelLoader:
 
 
 def load_runtime_artifacts():
-    """Verify repository runtime identity before deserializing production artifacts."""
-    ok, _, message = verify_runtime_artifact_identity()
-    if not ok:
-        raise ModelArtifactError(
-            "Runtime artifact identity verification failed; refusing to load artifacts. "
-            f"{message}"
-        )
+    """Load production artifacts through the identity-gated ModelLoader."""
     return ModelLoader().get_artifacts()
