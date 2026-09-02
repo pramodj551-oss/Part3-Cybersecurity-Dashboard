@@ -2,6 +2,7 @@
 
 from typing import Union
 
+import numpy as np
 import pandas as pd
 
 from config.config import EXCLUDED_POST_INCIDENT_FEATURES, PREDICTION_FEATURES
@@ -28,6 +29,15 @@ class PredictionEngine:
                 "Input is missing required prediction features: "
                 + ", ".join(missing)
             )
+
+        for column in PREDICTION_FEATURES:
+            if pd.api.types.is_numeric_dtype(data[column]):
+                values = data[column].to_numpy(dtype=float, na_value=np.nan)
+                if not np.isfinite(values).all():
+                    raise ValueError(
+                        f"Prediction feature '{column}' contains NaN or infinite values."
+                    )
+
         return data.copy()
 
     def transform(self, data: pd.DataFrame):
