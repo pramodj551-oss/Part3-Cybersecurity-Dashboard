@@ -157,3 +157,31 @@ def test_runtime_loader_refuses_to_deserialize_when_identity_fails(monkeypatch):
         model_loader.load_runtime_artifacts()
 
     assert load_called is False
+
+
+def test_direct_model_loader_refuses_to_deserialize_when_identity_fails(monkeypatch, tmp_path):
+    """Direct ModelLoader.load() must enforce the identity gate before deserialization."""
+    model_path = tmp_path / "best_model.pkl"
+    preprocessor_path = tmp_path / "preprocessor.pkl"
+    feature_columns_path = tmp_path / "feature_columns.pkl"
+    for path in (model_path, preprocessor_path, feature_columns_path):
+        path.write_bytes(b"untrusted-artifact")
+
+    monkeypatch.setattr(
+        model_loader,
+        "verify_runtime_artifact_identity",
+        lambda: (False, {}, "hash mismatch: models/best_model.pkl"),
+    )
+
+    def fail_if_deserialized(*args, **kwargs):
+        raise AssertionError("joblib.load must not run before identity verification")
+
+    monkeypatch.setattr(model_loader.joblib, "load", fail_if_deserialized)
+
+    loader = model_loader.ModelLoader(
+        model_path=model_path,
+        preprocessor_path=preprocessor_path,
+        feature_columns_path=feature_columns_path,
+    )
+    with pytest.raises(model_loader.ModelArtifactError, match="identity verification failed"):
+        loader.load()
