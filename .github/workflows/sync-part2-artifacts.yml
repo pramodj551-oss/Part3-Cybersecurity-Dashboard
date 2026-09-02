@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 env:
   PART2_REPOSITORY: "pramodj551-oss/Part2-Cybersecurity-ML-Pipeline"
@@ -130,16 +131,25 @@ jobs:
         run: |
           python scripts/smoke_test_prediction.py
 
-      - name: Commit synchronized artifacts
+      - name: Open pull request for synchronized artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
+          sync_branch="automation/part2-runtime-sync-${GITHUB_RUN_ID}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$sync_branch"
           git add models outputs
           if git diff --cached --quiet; then
             echo "No artifact changes"
             exit 0
           fi
           git commit -m "chore: sync Part 2 immutable runtime artifacts"
-          git push
+          git push --set-upstream origin "$sync_branch"
+          gh pr create \
+            --base main \
+            --head "$sync_branch" \
+            --title "chore: sync Part 2 immutable runtime artifacts" \
+            --body "Automated artifact sync. Runtime release tag and SHA-256 are fixed in the workflow; CI must pass before merge."
