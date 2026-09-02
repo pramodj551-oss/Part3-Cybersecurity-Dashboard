@@ -25,7 +25,7 @@ def _quote_is_unterminated(raw: bytes) -> bool:
     in_quotes = False
     index = 0
     while index < len(raw):
-        if raw[index] == 34:  # double quote
+        if raw[index] == 34:
             if in_quotes and index + 1 < len(raw) and raw[index + 1] == 34:
                 index += 2
                 continue
