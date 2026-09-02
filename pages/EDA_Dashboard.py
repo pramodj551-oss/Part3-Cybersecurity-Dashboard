@@ -10,6 +10,7 @@ import streamlit as st
 import pandas as pd
 
 from src.visualization import visualizer
+from src.arrow_compat import make_display_safe
 
 
 def render():
@@ -108,8 +109,8 @@ interactive visualizations.
     st.subheader("Descriptive Statistics")
 
     st.dataframe(
-        df.describe(include="all"),
-        use_container_width=True
+        make_display_safe(df.describe(include="all")),
+        width="stretch"
     )
 
     st.divider()
@@ -134,7 +135,7 @@ interactive visualizations.
 
     st.dataframe(
         info,
-        use_container_width=True
+        width="stretch"
     )
 
     st.divider()
