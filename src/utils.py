@@ -89,17 +89,62 @@ def dataset_summary(df: pd.DataFrame) -> dict:
 # Export Utilities
 # ==========================================================
 
+_CSV_FORMULA_PREFIXES = ("=", "+", "-", "@")
+
+
+def _sanitize_csv_cell(value):
+    """
+    Neutralize spreadsheet formula prefixes without changing numeric cells.
+
+    CSV files are plain text, but spreadsheet applications may interpret
+    string cells beginning with formula-like characters as executable
+    formulas when the file is opened. Prefixing such string values with a
+    single quote keeps the displayed value while preventing formula parsing.
+    """
+
+    if not isinstance(value, str):
+        return value
+
+    stripped = value.lstrip()
+    if stripped.startswith(_CSV_FORMULA_PREFIXES):
+        return "'" + value
+
+    return value
+
+
+def dataframe_to_safe_csv(dataframe: pd.DataFrame) -> str:
+    """
+    Serialize a dataframe to CSV with spreadsheet-formula injection hardening.
+
+    Only string cells are sanitized; numeric and other typed values remain
+    unchanged. This helper is for exports/downloads and must not be used for
+    model input parsing.
+    """
+
+    if not isinstance(dataframe, pd.DataFrame):
+        raise TypeError("dataframe must be a pandas DataFrame.")
+
+    safe_dataframe = dataframe.copy()
+    for column in safe_dataframe.columns:
+        series = safe_dataframe[column]
+        if pd.api.types.is_object_dtype(series.dtype) or pd.api.types.is_string_dtype(series.dtype):
+            safe_dataframe[column] = series.map(_sanitize_csv_cell)
+
+    return safe_dataframe.to_csv(index=False)
+
+
 def export_csv(
     dataframe: pd.DataFrame,
     output_path
 ):
     """
-    Export dataframe to CSV.
+    Export dataframe to CSV with spreadsheet-formula injection hardening.
     """
 
-    dataframe.to_csv(
-        output_path,
-        index=False
+    output_path = Path(output_path)
+    output_path.write_text(
+        dataframe_to_safe_csv(dataframe),
+        encoding="utf-8"
     )
 
 
@@ -177,10 +222,10 @@ def download_dataframe(
     filename="prediction_results.csv"
 ):
     """
-    Create a Streamlit download button.
+    Create a Streamlit download button with CSV formula-injection hardening.
     """
 
-    csv = dataframe.to_csv(index=False)
+    csv = dataframe_to_safe_csv(dataframe)
 
     st.download_button(
         label="Download Results",

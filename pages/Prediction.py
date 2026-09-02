@@ -6,6 +6,7 @@ from config.config import MAX_UPLOAD_SIZE_MB, PREDICTION_FEATURES
 from src.csv_security import CSVSecurityError, read_bounded_csv
 from src.prediction import PredictionEngine, predict_incident
 from src.upload_validation import validate_upload_size
+from src.utils import dataframe_to_safe_csv
 
 
 def render():
@@ -72,7 +73,7 @@ def render():
         st.dataframe(result, width="stretch")
         st.download_button(
             "Download Predictions CSV",
-            data=result.to_csv(index=False).encode("utf-8"),
+            data=dataframe_to_safe_csv(result).encode("utf-8"),
             file_name="predictions.csv",
             mime="text/csv",
         )
