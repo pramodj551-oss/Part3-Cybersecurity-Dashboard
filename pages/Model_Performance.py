@@ -85,9 +85,9 @@ def render():
     if not df.empty:
         st.plotly_chart(
             px.bar(df, x="Metric", y="Value", title="Regression Metrics"),
-            use_container_width=True,
+            width="stretch",
         )
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(df, width="stretch")
 
 
 if __name__ == "__main__":
