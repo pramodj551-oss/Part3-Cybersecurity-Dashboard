@@ -32,7 +32,7 @@ def _safe_reader(stream: BinaryIO):
     old_limit = csv.field_size_limit()
     csv.field_size_limit(MAX_CSV_FIELD_LENGTH)
     try:
-        reader = csv.reader(text)
+        reader = csv.reader(text, strict=True)
         rows = []
         total_cells = 0
         for row_number, row in enumerate(reader, start=1):
