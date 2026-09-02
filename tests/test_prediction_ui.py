@@ -8,7 +8,7 @@ from pages import Prediction
 class Upload(io.BytesIO):
     @property
     def size(self):
-        return len(self.getbuffer())
+        return getattr(self, "_size_override", len(self.getbuffer()))
 
 
 def test_prediction_page_surfaces_missing_feature_error(monkeypatch):
@@ -70,7 +70,13 @@ def test_prediction_page_rejects_oversized_upload_before_parser(monkeypatch):
 
     monkeypatch.setattr(Prediction.st, "file_uploader", lambda *args, **kwargs: upload)
     monkeypatch.setattr(Prediction.st, "error", errors.append)
-    monkeypatch.setattr(Prediction, "read_bounded_csv", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("parser must not run")))
+    monkeypatch.setattr(
+        Prediction,
+        "read_bounded_csv",
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("parser must not run")
+        ),
+    )
 
     Prediction.render()
     assert errors
