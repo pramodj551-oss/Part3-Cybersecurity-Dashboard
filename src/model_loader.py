@@ -66,6 +66,16 @@ class ModelLoader:
         self._require(self.preprocessor_path, "Preprocessor")
         self._require(self.feature_columns_path, "Feature column contract")
 
+        production_paths = (
+            self.model_path == Path(MODEL_PATH)
+            and self.preprocessor_path == Path(PREPROCESSOR_PATH)
+            and self.feature_columns_path == Path(FEATURE_COLUMNS_PATH)
+        )
+        if not production_paths:
+            raise ModelArtifactError(
+                "ModelLoader refuses to deserialize artifacts outside the configured production paths."
+            )
+
         ok, _, message = verify_runtime_artifact_identity()
         if not ok:
             raise ModelArtifactError(
@@ -100,4 +110,5 @@ class ModelLoader:
 
 def load_runtime_artifacts():
     """Load production artifacts through the identity-gated ModelLoader."""
-    return ModelLoader().get_artifacts()
+    loader = ModelLoader().load()
+    return loader.model, loader.preprocessor, loader.feature_columns
