@@ -55,9 +55,12 @@ learning model.
 
         input_df = pd.read_csv(uploaded_file)
 
-    except Exception as error:
+    except Exception:
 
-        st.error(f"Unable to read CSV file.\n\n{error}")
+        st.error(
+            "Unable to read the uploaded CSV file. "
+            "Please verify the file format."
+        )
 
         return
 
@@ -134,10 +137,11 @@ learning model.
                         f"{prediction_df['Confidence'].mean()*100:.2f}%"
                     )
 
-            except Exception as error:
+            except Exception:
 
                 st.error(
-                    f"Prediction failed.\n\n{error}"
+                    "Prediction failed. Please verify the input data "
+                    "and try again."
                 )
 
 
