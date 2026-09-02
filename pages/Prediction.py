@@ -31,8 +31,9 @@ def render():
 
     try:
         input_df = read_bounded_csv(uploaded_file)
-    except CSVSecurityError as error:
-        st.error(str(error))
+    except CSVSecurityError:
+        # Keep parser implementation details out of the UI error surface.
+        st.error("Malformed CSV upload. Please provide a valid CSV file.")
         return
 
     st.subheader("Input Preview")
