@@ -11,7 +11,7 @@ OUTPUTS_DIR = PROJECT_ROOT / "outputs"
 LOGS_DIR = PROJECT_ROOT / "logs"
 ASSETS_DIR = PROJECT_ROOT / "assets"
 IMAGES_DIR = ASSETS_DIR / "images"
-STYLES_DIR = ASSETS_DIR / "styles"
+STYLES_DIR = ASSETS_DIR / "styles'
 
 DATASET_NAME = "cybersecurity_incident_reports.csv"
 DATASET_PATH = RAW_DATA_DIR / DATASET_NAME
@@ -59,10 +59,9 @@ FIGURE_WIDTH = 10
 FIGURE_HEIGHT = 6
 MAX_PLOT_COLUMNS = 12
 MAX_UPLOAD_SIZE_MB = 100
-# CSV parser/resource-abuse guardrails apply after the byte-size boundary and
-# before a pandas DataFrame is constructed.
 MAX_CSV_ROWS = 100_000
 MAX_CSV_COLUMNS = 100
+MAX_CSV_CELLS = 1_000_000
 MAX_CSV_FIELD_LENGTH = 1_000_000
 SUPPORTED_FILE_TYPES = ["csv"]
 DEFAULT_SAMPLE_SIZE = 100
