@@ -40,10 +40,11 @@ def _safe_reader(stream: BinaryIO):
         raw = stream.read()
         if not isinstance(raw, (bytes, bytearray)):
             raise CSVSecurityError("Unable to read the uploaded CSV.")
-        if _quote_is_unterminated(bytes(raw)):
+        raw = bytes(raw)
+        if _quote_is_unterminated(raw):
             raise CSVSecurityError("CSV contains an unterminated quoted field.")
         text = io.TextIOWrapper(
-            io.BytesIO(bytes(raw)), encoding="utf-8-sig", errors="strict", newline=""
+            io.BytesIO(raw), encoding="utf-8-sig", errors="strict", newline=""
         )
     except UnicodeDecodeError as error:
         raise CSVSecurityError("CSV must be valid UTF-8 text.") from error
@@ -53,7 +54,11 @@ def _safe_reader(stream: BinaryIO):
         raise CSVSecurityError("Unable to read the uploaded CSV encoding.") from error
 
     old_limit = csv.field_size_limit()
-    csv.field_size_limit(MAX_CSV_FIELD_LENGTH)
+    # Allow one byte/character beyond the configured field boundary so that
+    # header validation gets the first opportunity to classify an oversized
+    # column name as an invalid column, rather than as a generic field error.
+    parser_limit = MAX_CSV_FIELD_LENGTH + 1
+    csv.field_size_limit(parser_limit)
     try:
         reader = csv.reader(text, strict=True)
         rows = []
@@ -68,6 +73,8 @@ def _safe_reader(stream: BinaryIO):
                     raise CSVSecurityError(
                         f"CSV exceeds the maximum of {MAX_CSV_COLUMNS} columns."
                     )
+                # Header-specific validation must happen before the generic
+                # data-field validation path.
                 if any(not name or len(name) > MAX_CSV_FIELD_LENGTH for name in row):
                     raise CSVSecurityError("CSV contains an invalid column name.")
             else:
