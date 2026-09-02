@@ -11,6 +11,7 @@ import pandas as pd
 
 from src.visualization import visualizer
 from src.utils import dataset_summary
+from src.arrow_compat import make_display_safe
 
 
 def render():
@@ -83,8 +84,8 @@ quality, and statistical information.
     st.subheader("Dataset Preview")
 
     st.dataframe(
-        df.head(20),
-        use_container_width=True
+        make_display_safe(df.head(20)),
+        width="stretch"
     )
 
     st.divider()
@@ -109,7 +110,7 @@ quality, and statistical information.
 
     st.dataframe(
         info,
-        use_container_width=True
+        width="stretch"
     )
 
     st.divider()
