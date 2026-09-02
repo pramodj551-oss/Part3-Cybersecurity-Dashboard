@@ -122,7 +122,7 @@ outputs/metrics.json
 outputs/feature_importance.csv
 ```
 
-These generated runtime artifacts are intentionally external to this repository. The dashboard **does not create fake placeholders** when they are missing. `src/model_loader.py` fails closed with a clear error, while CI reports external artifact availability separately.
+These generated runtime artifacts are intentionally external to this repository. The dashboard **does not create fake placeholders** when they are missing. `src/model_loader.py` fails closed with a clear error, while CI obtains the same pinned external runtime bundle used for validation.
 
 Generate/sync the artifacts from the Part 2 pipeline before enabling production prediction.
 
@@ -161,11 +161,16 @@ GitHub Actions is the authoritative source for execution evidence. README claims
 
 CI validates:
 
-1. Python compilation for application and tests.
-2. Application-module importability.
+1. Python compilation for application, source, scripts, and tests.
+2. Application-module importability, including upload validation.
 3. The committed raw-dataset path and required schema.
-4. Runtime artifact availability when artifacts are present, otherwise an explicit `SKIP` because generated artifacts are external.
-5. Unit tests, including the fail-closed runtime loader contract and STEP 20 explainability tests.
+4. A **pinned Part 2 runtime release** is downloaded on every test job; its manifest is required to contain exactly the six runtime artifacts listed above, and every artifact is SHA256-verified before being installed into `models/` and `outputs/` for the test run.
+5. The installed runtime model, preprocessor, and feature-column contract are loadable and structurally valid.
+6. A real prediction smoke test executes against the downloaded runtime artifacts.
+7. Unit tests, including the fail-closed runtime loader contract and STEP 20 explainability tests.
+8. A dependency vulnerability audit runs independently with `pip-audit`.
+
+**Important:** CI's successful artifact validation proves that the pinned external Part 2 runtime bundle is usable in the CI environment. It does **not** mean those generated artifacts are committed to this repository or automatically synchronized into a separate production deployment environment. The target deployment must have access to the compatible Part 2 runtime artifacts before prediction is enabled.
 
 ## STEP 20 — Explainability
 
@@ -175,9 +180,9 @@ CI validates:
 
 **Source-code readiness:** CI-tested dashboard architecture.
 
-**Prediction readiness:** requires the three Part 2 runtime artifacts to be synced into `models/`.
+**Prediction readiness:** requires access to the three Part 2 runtime artifacts in `models/` (or an equivalent deployment-time synchronization mechanism).
 
-Therefore the repository must **not** be described as fully deployment-ready until artifact synchronization and an actual prediction smoke test have passed in the target deployment environment.
+Therefore the repository must **not** be described as fully deployment-ready until artifact synchronization/access and an actual prediction smoke test have passed in the target deployment environment.
 
 ## License
 
