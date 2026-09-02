@@ -15,10 +15,14 @@ from src.csv_security import CSVSecurityError, read_bounded_csv
 from src.upload_validation import validate_upload_size
 
 
+class Upload(io.BytesIO):
+    @property
+    def size(self):
+        return len(self.getbuffer())
+
+
 def csv_bytes(payload: bytes):
-    stream = io.BytesIO(payload)
-    stream.size = len(payload)
-    return stream
+    return Upload(payload)
 
 
 def test_zero_byte_upload_is_rejected_before_parser():
