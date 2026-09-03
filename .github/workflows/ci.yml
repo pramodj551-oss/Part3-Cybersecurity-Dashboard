@@ -74,7 +74,7 @@ jobs:
         run: |
           set -euo pipefail
           api="https://api.github.com/repos/${PART2_REPOSITORY}/git/ref/tags/${PART2_RELEASE_TAG}"
-          actual_commit="$(curl --fail-with-body --silent --show-error --location -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "$api" | python -c 'import json,sys; print(json.load(sys.stdin)["object"]["sha"])')"
+          actual_commit="$(curl --fail-with-body --silent --show-error --location -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" -H "Authorization: Bearer ${{ github.token }}" "$api" | python -c 'import json,sys; print(json.load(sys.stdin)["object"]["sha"])')"
           test "$actual_commit" = "$PART2_RELEASE_COMMIT" || { echo "FAIL Part 2 release tag target: $actual_commit != $PART2_RELEASE_COMMIT"; exit 1; }
           echo "PASS Part 2 release tag target: ${PART2_RELEASE_TAG} -> ${actual_commit}"
       - name: Download pinned Part 2 runtime release
