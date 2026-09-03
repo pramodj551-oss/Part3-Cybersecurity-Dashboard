@@ -130,7 +130,7 @@ jobs:
           print(f"PASS loaded runtime artifacts: {len(feature_columns)} feature columns.")
           PY
       - name: Health/readiness smoke test
-        run: python scripts/health_check.py --json
+        run: python -m scripts.health_check --json
       - name: Real prediction smoke test
         run: python scripts/smoke_test_prediction.py
       - name: Run unit tests
