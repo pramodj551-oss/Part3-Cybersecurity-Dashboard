@@ -1,5 +1,8 @@
 """Part 2-compatible cybersecurity regression prediction engine."""
 
+from __future__ import annotations
+
+import multiprocessing
 from typing import Union
 
 import numpy as np
@@ -9,9 +12,66 @@ from config.config import (
     EXCLUDED_POST_INCIDENT_FEATURES,
     PREDICTION_FEATURES,
     PREDICTION_NUMERIC_LIMITS,
+    PREDICTION_TIMEOUT_SECONDS,
 )
 from src.model_loader import load_runtime_artifacts
 from src.observability import elapsed_ms, emit_event, start_timer
+
+
+def _model_predict_worker(connection, model, values):
+    """Run model.predict in a disposable child process.
+
+    The worker receives only the already-validated, deterministically aligned
+    NumPy matrix. The parent owns the process lifetime and can terminate it if
+    inference exceeds the configured deadline.
+    """
+    try:
+        prediction = model.predict(values)
+        connection.send(("ok", np.asarray(prediction)))
+    except Exception:
+        # Never send exception text or model internals back across the boundary.
+        connection.send(("error", None))
+    finally:
+        connection.close()
+
+
+def _isolated_model_predict(model, values, timeout_seconds: float):
+    """Execute model.predict with a hard process-level execution deadline."""
+    if timeout_seconds <= 0:
+        raise ValueError("Prediction timeout must be greater than zero.")
+
+    context = multiprocessing.get_context("spawn")
+    parent_connection, child_connection = context.Pipe(duplex=False)
+    process = context.Process(
+        target=_model_predict_worker,
+        args=(child_connection, model, np.asarray(values)),
+        name="part3-model-inference",
+    )
+    process.daemon = True
+    process.start()
+    child_connection.close()
+
+    try:
+        if not parent_connection.poll(timeout_seconds):
+            if process.is_alive():
+                process.kill()
+                process.join(timeout=2.0)
+            raise TimeoutError("Prediction exceeded the configured execution deadline.")
+
+        status, prediction = parent_connection.recv()
+        process.join(timeout=2.0)
+        if process.is_alive():
+            process.kill()
+            process.join(timeout=2.0)
+        if status != "ok":
+            raise RuntimeError("Model inference failed in the isolated worker.")
+        return prediction
+    finally:
+        parent_connection.close()
+        if process.is_alive():
+            process.kill()
+            process.join(timeout=2.0)
+        process.close()
 
 
 class PredictionEngine:
@@ -100,7 +160,11 @@ class PredictionEngine:
         # keep inference representation consistent with training and suppress
         # the sklearn feature-name warning without changing feature order.
         aligned = self.transform(data)
-        return self.model.predict(aligned.to_numpy())
+        return _isolated_model_predict(
+            self.model,
+            aligned.to_numpy(),
+            PREDICTION_TIMEOUT_SECONDS,
+        )
 
     def predict_with_summary(self, data: pd.DataFrame) -> pd.DataFrame:
         raw = self.validate_input(data)
@@ -122,6 +186,16 @@ def predict_incident(input_data: Union[pd.DataFrame, pd.Series]):
             "prediction_validation_failure",
             "failure",
             error_category="validation",
+            duration_ms=elapsed_ms(started),
+            rows=rows,
+            columns=columns,
+        )
+        raise
+    except TimeoutError:
+        emit_event(
+            "prediction_runtime_failure",
+            "failure",
+            error_category="timeout",
             duration_ms=elapsed_ms(started),
             rows=rows,
             columns=columns,
