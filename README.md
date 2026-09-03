@@ -26,6 +26,8 @@ This inventory reflects the tracked production repository, including the securit
 Part3-Cybersecurity-Dashboard/
 ├── app.py
 ├── requirements.txt
+├── requirements.in
+├── requirements-dev.txt
 ├── pytest.ini
 ├── runtime.txt
 ├── README.md
@@ -35,11 +37,13 @@ Part3-Cybersecurity-Dashboard/
 ├── .gitignore
 ├── .github/
 │   └── workflows/
+│       ├── _generate-dependency-lock.yml
 │       ├── ci.yml
 │       └── sync-part2-artifacts.yml
 ├── .streamlit/
 │   └── config.toml
 ├── assets/
+│   └── styles.css
 ├── config/
 │   └── config.py
 ├── data/
@@ -62,9 +66,12 @@ Part3-Cybersecurity-Dashboard/
 │   ├── EDA_Dashboard.py
 │   ├── Prediction.py
 │   ├── Feature_Importance.py
-│   └── Model_Performance.py
+│   ├── Model_Performance.py
+│   └── Health.py
 ├── scripts/
+│   ├── health_check.py
 │   ├── smoke_test_prediction.py
+│   ├── validate_runtime_bundle.py
 │   └── verify_repository_artifact_hashes.py
 ├── src/
 │   ├── arrow_compat.py
@@ -72,24 +79,39 @@ Part3-Cybersecurity-Dashboard/
 │   ├── dashboard.py
 │   ├── deployment_fingerprint.py
 │   ├── explainability.py
+│   ├── health.py
 │   ├── model_loader.py
+│   ├── observability.py
 │   ├── prediction.py
 │   ├── preprocessing.py
 │   ├── runtime_artifact_identity.py
+│   ├── runtime_bundle_security.py
 │   ├── theme.py
 │   ├── upload_validation.py
 │   ├── utils.py
 │   └── visualization.py
 └── tests/
+    ├── test_ci_security_contract.py
+    ├── test_config_initialization.py
+    ├── test_csv_export_security.py
+    ├── test_csv_security.py
+    ├── test_health.py
+    ├── test_observability.py
     ├── test_prediction_adversarial.py
     ├── test_prediction_ui.py
     ├── test_runtime_artifact_identity.py
+    ├── test_runtime_bundle_security.py
     ├── test_runtime_contract.py
     ├── test_step20_explainability.py
     ├── test_step31b_marker.py
     ├── test_step32_ci_privilege_contract.py
     ├── test_step32_security_hardening.py
-    └── test_upload_validation.py
+    ├── test_step33a_low4_ui_artifact_hardening.py
+    ├── test_step34a_workflow_dependency_pinning.py
+    ├── test_step34b_permissions_contract.py
+    ├── test_step35b_archive_security.py
+    ├── test_upload_validation.py
+    └── test_utils_security.py
 ```
 
 ### Structure maintenance rule
@@ -172,6 +194,7 @@ The `pages/` directory is the authoritative Streamlit multipage UI. `app.py` is 
 - **Prediction** — bounded CSV upload and inference using the fitted Part 2 artifacts.
 - **Feature Importance** — deterministic STEP 20 feature-importance artifact visualization.
 - **Model Performance** — regression MAE, RMSE, and R² metrics.
+- **Health** — liveness/readiness runtime status and deployment fingerprint.
 
 ## Security and CI Validation
 
@@ -186,7 +209,7 @@ CI validates:
 5. A **pinned Part 2 runtime release** is downloaded on every test job; its manifest must contain exactly the six runtime artifacts, and every artifact is SHA256-verified before installation.
 6. The installed runtime model, preprocessor, and feature-column contract are loadable and structurally valid.
 7. A real prediction smoke test executes against the downloaded runtime artifacts.
-8. Unit and adversarial tests cover runtime identity, bounded CSV parsing, prediction validation, STEP 20 explainability, and CI privilege contracts.
+8. Unit and adversarial tests cover runtime identity, bounded CSV parsing, prediction validation, STEP 20 explainability, health/readiness, observability, and CI privilege contracts.
 9. A dependency vulnerability audit runs independently with `pip-audit`.
 
 The manual `sync-part2-artifacts.yml` workflow is restricted to `workflow_dispatch`, verifies the pinned bundle, updates a dedicated automation branch, and opens a PR to `main`; it does not directly push generated artifacts to `main`.
