@@ -1,0 +1,88 @@
+name: Generate dependency lock (temporary)
+
+on:
+  push:
+    branches:
+      - feature/step35a-fix1-dependency-lock
+
+permissions:
+  contents: read
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.10"
+      - name: Generate hashed production lock
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --upgrade "pip==25.0.1"
+          python -m pip install --disable-pip-version-check "pip-tools==7.6.1"
+          python -m piptools compile requirements.in --generate-hashes --output-file requirements.txt --strip-extras
+          test -s requirements.txt
+          grep -Eq -- '--hash=sha256:' requirements.txt
+          ! grep -Eiq '(^|[[:space:]])(jupyter|ipykernel)(==|>=|<=|~=|>|<)' requirements.txt
+      - name: Upload generated lock
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: production-requirements-lock
+          path: requirements.txt
+          if-no-files-found: error
+
+  verify-lock:
+    needs: lock
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v6.0.0
+        with:
+          name: production-requirements-lock
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Verify lock content and install with require-hashes
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --upgrade "pip==25.0.1"
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          text = Path("requirements.txt").read_text(encoding="utf-8")
+          entries = []
+          current = None
+          for line in text.splitlines():
+              m = re.match(r"^([A-Za-z0-9_.-]+)==([^\s\\]+)\s+\\$", line)
+              if m:
+                  current = {"name": m.group(1).lower().replace("_", "-"), "version": m.group(2), "hashes": []}
+                  entries.append(current)
+              elif current:
+                  current["hashes"].extend(re.findall(r"--hash=sha256:([0-9a-f]{64})", line))
+          if len(entries) != 50:
+              raise SystemExit(f"FAIL lock package count: {len(entries)} != 50")
+          missing = [e["name"] for e in entries if not e["hashes"]]
+          if missing:
+              raise SystemExit(f"FAIL packages without SHA256 hashes: {missing}")
+          if any(e["name"] in {"jupyter", "ipykernel"} for e in entries):
+              raise SystemExit("FAIL developer notebook dependency leaked into production lock")
+          required = {"pandas": "2.2.2", "numpy": "1.26.4", "scikit-learn": "1.5.1", "joblib": "1.4.2", "scipy": "1.15.3", "matplotlib": "3.10.8"}
+          actual = {e["name"]: e["version"] for e in entries}
+          for name, version in required.items():
+              if actual.get(name) != version:
+                  raise SystemExit(f"FAIL required pin {name}: {actual.get(name)} != {version}")
+          print(f"PASS lock content: {len(entries)} packages; every package has SHA256 hash")
+          PY
+          python -m pip install --disable-pip-version-check --require-hashes -r requirements.txt
+          python -m pip check
+          python -c "import numpy, pandas, scipy, sklearn, matplotlib, streamlit, plotly; print('PASS imports on Python', __import__('sys').version.split()[0])"
+      - name: Security regression
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check "pip-audit==2.7.3"
+          python -m pip_audit -r requirements.txt

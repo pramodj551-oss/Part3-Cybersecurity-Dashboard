@@ -1,0 +1,11 @@
+# Production dependency inputs for the reproducible/hash-locked runtime.
+# The generated requirements.txt is the approved install lock.
+pandas==2.2.2
+numpy==1.26.4
+scikit-learn==1.5.1
+joblib==1.4.2
+scipy==1.15.3
+streamlit>=1.46.0
+pyarrow<25
+matplotlib==3.10.8
+plotly>=5.24.0
