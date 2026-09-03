@@ -8,6 +8,7 @@ on:
       - feature/step31b-csv-resource-abuse
       - feature/step31-end-to-end-security-audit
       - feature/step32-cicd-deployment-hardening
+      - feature/step35a-fix2-production-lock-contract
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -39,7 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check --upgrade "pip==25.0.1"
-          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m pip install --disable-pip-version-check --require-hashes -r requirements.txt
           python -m pip install --disable-pip-version-check "pytest==8.3.5"
           python -m pip check
       - name: Compile Python sources
@@ -131,7 +132,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install --disable-pip-version-check --upgrade "pip==25.0.1"
-          python -m pip install --disable-pip-version-check -r requirements.txt
+          python -m pip install --disable-pip-version-check --require-hashes -r requirements.txt
           python -m pip install --disable-pip-version-check "pip-audit==2.7.3"
           python -m pip check
       - name: Dependency vulnerability scan
