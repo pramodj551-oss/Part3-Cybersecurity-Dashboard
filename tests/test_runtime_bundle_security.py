@@ -27,7 +27,12 @@ def test_safe_bundle_extracts(tmp_path: Path) -> None:
 
     safe_extract_runtime_bundle(archive, destination)
 
-    assert sorted(p.relative_to(destination).as_posix() for p in destination.rglob("*")) == sorted(EXPECTED_BUNDLE_MEMBERS)
+    extracted_files = sorted(
+        p.relative_to(destination).as_posix()
+        for p in destination.rglob("*")
+        if p.is_file()
+    )
+    assert extracted_files == sorted(EXPECTED_BUNDLE_MEMBERS)
 
 
 def test_parent_traversal_is_rejected_before_extraction(tmp_path: Path) -> None:
