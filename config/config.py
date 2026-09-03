@@ -57,6 +57,10 @@ PREDICTION_NUMERIC_LIMITS = {
     "zero_day_used": (0.0, 1.0),
 }
 
+# Hard execution deadline for the isolated model.predict() boundary.
+# A timed-out worker process is terminated rather than merely observed.
+PREDICTION_TIMEOUT_SECONDS = 10.0
+
 LOG_FILE = LOGS_DIR / "dashboard.log"
 LOG_LEVEL = "INFO"
 APP_TITLE = "AI-Powered Cybersecurity Dashboard"
