@@ -58,7 +58,7 @@ jobs:
           entries = []
           current = None
           for line in text.splitlines():
-              m = re.match(r"^([A-Za-z0-9_.-]+)==([^\\s\\\\]+) \\\\$", line)
+              m = re.match(r"^([A-Za-z0-9_.-]+)==([^\s\\]+)\s+\\$", line)
               if m:
                   current = {"name": m.group(1).lower().replace("_", "-"), "version": m.group(2), "hashes": []}
                   entries.append(current)
