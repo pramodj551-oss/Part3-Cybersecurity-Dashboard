@@ -21,12 +21,22 @@ def test_readiness_reports_current_runtime_commit(monkeypatch):
     monkeypatch.setattr(
         health,
         "verify_runtime_artifact_identity",
-        lambda: {"models/best_model.pkl": "ok"},
+        lambda: (True, {"models/best_model.pkl": "ok"}, "verified"),
+    )
+    monkeypatch.setattr(
+        health,
+        "load_runtime_artifacts",
+        lambda: (
+            type("Model", (), {"predict": lambda self, x: x})(),
+            type("Preprocessor", (), {"transform": lambda self, x: x})(),
+            ["feature"],
+        ),
     )
     result = health.readiness()
     assert result["status"] == "ready"
     assert result["runtime_commit"] == "test-commit"
     assert result["artifacts"]["status"] == "ready"
+    assert result["artifacts"]["verified_files"] == 1
     assert result["model"]["status"] == "ready"
 
 
@@ -40,17 +50,21 @@ def test_readiness_fails_closed_on_artifact_verification_error(monkeypatch):
     assert result["artifacts"]["identity_verified"] is False
 
 
-def test_readiness_fails_when_model_file_is_missing(monkeypatch, tmp_path):
-    monkeypatch.setattr(health, "verify_runtime_artifact_identity", lambda: True)
-    monkeypatch.setattr(health, "MODEL_PATH", tmp_path / "missing-model.pkl")
-    monkeypatch.setattr(health, "PREPROCESSOR_PATH", tmp_path / "preprocessor.pkl")
-    monkeypatch.setattr(health, "FEATURE_COLUMNS_PATH", tmp_path / "feature_columns.pkl")
-    health.PREPROCESSOR_PATH.write_bytes(b"x")
-    health.FEATURE_COLUMNS_PATH.write_bytes(b"x")
+def test_readiness_fails_when_model_loader_fails(monkeypatch):
+    monkeypatch.setattr(
+        health,
+        "verify_runtime_artifact_identity",
+        lambda: (True, {"models/best_model.pkl": "ok"}, "verified"),
+    )
 
+    def fail_loader():
+        raise FileNotFoundError("missing model")
+
+    monkeypatch.setattr(health, "load_runtime_artifacts", fail_loader)
     result = health.readiness()
     assert result["status"] == "not_ready"
-    assert "model" in result["model"]["missing_or_empty"]
+    assert result["model"]["status"] == "not_ready"
+    assert result["model"]["model_predict_callable"] is False
 
 
 def test_health_snapshot_contains_liveness_and_readiness(monkeypatch):
