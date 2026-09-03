@@ -2,9 +2,9 @@
 
 import streamlit as st
 
-from config.config import MAX_UPLOAD_SIZE_MB, PREDICTION_FEATURES
+from config.config import MAX_UPLOAD_SIZE_MB
 from src.csv_security import CSVSecurityError, read_bounded_csv
-from src.prediction import PredictionEngine, predict_incident
+from src.prediction import predict_incident
 from src.upload_validation import validate_upload_size
 from src.utils import dataframe_to_safe_csv
 
@@ -43,16 +43,7 @@ def render():
 
     if st.button("Generate Predictions", type="primary"):
         try:
-            missing = [column for column in PREDICTION_FEATURES if column not in input_df.columns]
-            if missing:
-                st.error(
-                    "Prediction input is missing required features: "
-                    + ", ".join(missing)
-                )
-                return
-
-            validated_input = PredictionEngine.validate_input(input_df)
-            result = predict_incident(validated_input)
+            result = predict_incident(input_df)
         except ValueError as error:
             st.error(f"Prediction input validation failed: {error}")
             return
