@@ -58,6 +58,7 @@ modules = [
     "Prediction",
     "Feature Importance",
     "Model Performance",
+    "Health",
 ]
 for module in modules:
     st.markdown(f"- {module}")
