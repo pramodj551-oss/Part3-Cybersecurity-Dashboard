@@ -9,6 +9,7 @@ on:
       - feature/step31-end-to-end-security-audit
       - feature/step32-cicd-deployment-hardening
       - feature/step35a-fix2-production-lock-contract
+      - feature/step35b-runtime-artifact-hardening
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -20,6 +21,7 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   PART2_REPOSITORY: "pramodj551-oss/Part2-Cybersecurity-ML-Pipeline"
   PART2_RELEASE_TAG: "part2-runtime-33513838252"
+  PART2_RELEASE_COMMIT: "4c7714cff07829d5fdcee052f936045df30c23b7"
   PART2_BUNDLE_NAME: "part2-runtime-bundle.zip"
   PART2_BUNDLE_SHA256: "ece2b6bf91f19e5c0eb19475ae7198155f3fdaa4e8839ec9ab95f8cfcf031d54"
 
@@ -67,6 +69,13 @@ jobs:
           PY
       - name: Verify current Part 3 repository artifact identity
         run: python scripts/verify_repository_artifact_hashes.py
+      - name: Verify pinned Part 2 release provenance
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${PART2_REPOSITORY}/git/ref/tags/${PART2_RELEASE_TAG}"
+          actual_commit="$(curl --fail-with-body --silent --show-error --location -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "$api" | python -c 'import json,sys; print(json.load(sys.stdin)["object"]["sha"])')"
+          test "$actual_commit" = "$PART2_RELEASE_COMMIT" || { echo "FAIL Part 2 release tag target: $actual_commit != $PART2_RELEASE_COMMIT"; exit 1; }
+          echo "PASS Part 2 release tag target: ${PART2_RELEASE_TAG} -> ${actual_commit}"
       - name: Download pinned Part 2 runtime release
         run: |
           set -euo pipefail
@@ -74,15 +83,22 @@ jobs:
           url="https://github.com/${PART2_REPOSITORY}/releases/download/${PART2_RELEASE_TAG}/${PART2_BUNDLE_NAME}"
           curl --fail-with-body --silent --show-error --location "$url" -o .part2-runtime/artifacts.zip
           actual_sha256="$(sha256sum .part2-runtime/artifacts.zip | cut -d' ' -f1)"
-          if [[ "$actual_sha256" != "$PART2_BUNDLE_SHA256" ]]; then
-            echo "FAIL Part 2 bundle SHA256: $actual_sha256 != $PART2_BUNDLE_SHA256"
-            exit 1
-          fi
+          if [[ "$actual_sha256" != "$PART2_BUNDLE_SHA256" ]]; then echo "FAIL Part 2 bundle SHA256: $actual_sha256 != $PART2_BUNDLE_SHA256"; exit 1; fi
           echo "PASS Part 2 bundle SHA256: $actual_sha256"
-          unzip -q .part2-runtime/artifacts.zip -d .part2-runtime/extracted
+      - name: Validate ZIP members before extraction
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+          from scripts.validate_runtime_bundle import validate_zip_members
+          archive = Path(".part2-runtime/artifacts.zip")
+          validate_zip_members(archive)
+          with ZipFile(archive) as zf:
+              zf.extractall(".part2-runtime/extracted")
+          print("PASS ZIP member security validation and extraction")
+          PY
           rm -f .part2-runtime/artifacts.zip
           test -s .part2-runtime/extracted/artifact_manifest.json
-          echo "PASS downloaded pinned Part 2 runtime release: ${PART2_RELEASE_TAG}"
       - name: Verify artifact integrity and install six-file contract
         run: |
           set -euo pipefail
@@ -101,9 +117,7 @@ jobs:
           shutil.rmtree("models", ignore_errors=True); shutil.rmtree("outputs", ignore_errors=True)
           for relative in expected:
               destination = Path(relative); destination.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(root / relative, destination)
-              print(f"PASS artifact: {relative}")
           shutil.copy2(root / "artifact_manifest.json", Path("models/artifact_manifest.json"))
-          print("PASS runtime artifact manifest installed: models/artifact_manifest.json")
           print("PASS 6/6 Part 2 artifacts + SHA256 integrity contract")
           PY
       - name: Validate loaded runtime artifacts
