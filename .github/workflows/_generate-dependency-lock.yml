@@ -1,12 +1,12 @@
-name: Generate dependency lock (temporary)
+name: Generate dependency lock
 
 on:
   push:
     branches:
-      - feature/step35a-fix1-dependency-lock
+      - feature/step35a-fix2-production-lock-contract
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   lock:
@@ -25,6 +25,18 @@ jobs:
           test -s requirements.txt
           grep -Eq -- '--hash=sha256:' requirements.txt
           ! grep -Eiq '(^|[[:space:]])(jupyter|ipykernel)(==|>=|<=|~=|>|<)' requirements.txt
+      - name: Commit generated production lock
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- requirements.txt; then
+            echo "PASS committed production lock is already current"
+          else
+            git add requirements.txt
+            git commit -m "chore(step35a): commit generated hashed production lock"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
       - name: Upload generated lock
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
