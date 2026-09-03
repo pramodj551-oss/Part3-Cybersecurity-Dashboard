@@ -4,9 +4,9 @@ from __future__ import annotations
 import posixpath
 import stat
 from pathlib import Path
-from zipfile import ZipFile, BadZipFile
+from zipfile import BadZipFile, ZipFile
 
-EXPECTED_MEMBERS = {
+EXPECTED_FILES = {
     "artifact_manifest.json",
     "models/best_model.pkl",
     "models/preprocessor.pkl",
@@ -15,6 +15,8 @@ EXPECTED_MEMBERS = {
     "outputs/metrics.json",
     "outputs/feature_importance.csv",
 }
+EXPECTED_DIRECTORIES = {"models/", "outputs/"}
+EXPECTED_MEMBERS = EXPECTED_FILES | EXPECTED_DIRECTORIES
 
 
 def validate_zip_members(archive: Path) -> None:
@@ -39,14 +41,20 @@ def validate_zip_members(archive: Path) -> None:
         if not name or "\\" in name:
             raise ValueError(f"Unsafe ZIP member path: {name!r}")
         normalized = posixpath.normpath(name)
-        if normalized != name or normalized.startswith("../") or normalized == "..":
+        if normalized != name and name not in EXPECTED_DIRECTORIES:
+            raise ValueError(f"Path traversal ZIP member: {name!r}")
+        if normalized.startswith("../") or normalized == "..":
             raise ValueError(f"Path traversal ZIP member: {name!r}")
         if name.startswith("/") or Path(name).is_absolute():
             raise ValueError(f"Absolute ZIP member path: {name!r}")
         mode = (info.external_attr >> 16) & 0o170000
         if mode == stat.S_IFLNK:
             raise ValueError(f"Symlink ZIP member is not allowed: {name!r}")
+        if name in EXPECTED_DIRECTORIES:
+            if not info.is_dir():
+                raise ValueError(f"Expected ZIP directory is not a directory: {name!r}")
+            continue
         if info.is_dir():
-            raise ValueError(f"Directory ZIP member is not allowed: {name!r}")
+            raise ValueError(f"Unexpected directory ZIP member: {name!r}")
         if info.file_size == 0:
             raise ValueError(f"Empty ZIP member is not allowed: {name!r}")
