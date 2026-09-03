@@ -64,8 +64,8 @@ jobs:
                   entries.append(current)
               elif current:
                   current["hashes"].extend(re.findall(r"--hash=sha256:([0-9a-f]{64})", line))
-          if len(entries) != 49:
-              raise SystemExit(f"FAIL lock package count: {len(entries)} != 49")
+          if len(entries) != 50:
+              raise SystemExit(f"FAIL lock package count: {len(entries)} != 50")
           missing = [e["name"] for e in entries if not e["hashes"]]
           if missing:
               raise SystemExit(f"FAIL packages without SHA256 hashes: {missing}")
