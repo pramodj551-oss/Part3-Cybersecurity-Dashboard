@@ -11,6 +11,7 @@ from config.config import (
     PREDICTION_NUMERIC_LIMITS,
 )
 from src.model_loader import load_runtime_artifacts
+from src.observability import elapsed_ms, emit_event, start_timer
 
 
 class PredictionEngine:
@@ -109,4 +110,60 @@ class PredictionEngine:
 
 
 def predict_incident(input_data: Union[pd.DataFrame, pd.Series]):
-    return PredictionEngine().predict_with_summary(input_data)
+    """Run prediction while emitting safe structured success/failure events."""
+    started = start_timer()
+    rows = len(input_data) if hasattr(input_data, "__len__") else 0
+    columns = len(input_data.columns) if isinstance(input_data, pd.DataFrame) else 0
+    emit_event("prediction_started", "started", rows=rows, columns=columns)
+    try:
+        result = PredictionEngine().predict_with_summary(input_data)
+    except ValueError:
+        emit_event(
+            "prediction_validation_failure",
+            "failure",
+            error_category="validation",
+            duration_ms=elapsed_ms(started),
+            rows=rows,
+            columns=columns,
+        )
+        raise
+    except FileNotFoundError:
+        emit_event(
+            "prediction_runtime_failure",
+            "failure",
+            error_category="artifact_unavailable",
+            duration_ms=elapsed_ms(started),
+            rows=rows,
+            columns=columns,
+        )
+        raise
+    except RuntimeError:
+        emit_event(
+            "prediction_runtime_failure",
+            "failure",
+            error_category="runtime_validation",
+            duration_ms=elapsed_ms(started),
+            rows=rows,
+            columns=columns,
+        )
+        raise
+    except Exception:
+        emit_event(
+            "prediction_runtime_failure",
+            "failure",
+            error_category="unexpected",
+            duration_ms=elapsed_ms(started),
+            rows=rows,
+            columns=columns,
+        )
+        raise
+
+    emit_event(
+        "prediction_success",
+        "success",
+        duration_ms=elapsed_ms(started),
+        rows=rows,
+        columns=columns,
+        prediction_count=len(result),
+    )
+    return result
