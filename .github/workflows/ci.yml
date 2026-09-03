@@ -10,6 +10,7 @@ on:
       - feature/step32-cicd-deployment-hardening
       - feature/step35a-fix2-production-lock-contract
       - feature/step35b-runtime-artifact-hardening
+      - feature/step37b-health-readiness-resilience
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -51,7 +52,7 @@ jobs:
         run: |
           python - <<'PY'
           import importlib
-          modules = ["app", "pages.Dataset_Explorer", "pages.EDA_Dashboard", "pages.Feature_Importance", "pages.Home", "pages.Model_Performance", "pages.Prediction", "src.csv_security", "src.dashboard", "src.explainability", "src.model_loader", "src.prediction", "src.preprocessing", "src.theme", "src.upload_validation", "src.utils", "src.visualization"]
+          modules = ["app", "pages.Dataset_Explorer", "pages.EDA_Dashboard", "pages.Feature_Importance", "pages.Home", "pages.Model_Performance", "pages.Prediction", "src.csv_security", "src.dashboard", "src.explainability", "src.health", "src.model_loader", "src.prediction", "src.preprocessing", "src.theme", "src.upload_validation", "src.utils", "src.visualization"]
           for module in modules:
               importlib.import_module(module)
               print(f"PASS import: {module}")
@@ -128,6 +129,8 @@ jobs:
           assert callable(getattr(model, "predict", None)); assert callable(getattr(preprocessor, "transform", None)); assert feature_columns
           print(f"PASS loaded runtime artifacts: {len(feature_columns)} feature columns.")
           PY
+      - name: Health/readiness smoke test
+        run: python -m scripts.health_check --json
       - name: Real prediction smoke test
         run: python scripts/smoke_test_prediction.py
       - name: Run unit tests
